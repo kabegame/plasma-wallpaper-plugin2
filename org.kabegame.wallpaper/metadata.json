@@ -1,0 +1,23 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "support@kabegame.com",
+                "Name": "Kabegame Team"
+            }
+        ],
+        "Description": "Kabegame 壁纸插件 - 支持过渡效果和多种拉伸模式",
+        "Description[zh_CN]": "Kabegame 壁纸插件 - 支持过渡效果和多种拉伸模式",
+        "Icon": "preferences-desktop-wallpaper",
+        "Id": "org.kabegame.wallpaper",
+        "License": "MIT",
+        "Name": "Kabegame Wallpaper",
+        "Name[zh_CN]": "Kabegame 壁纸",
+        "ServiceTypes": [
+            "Plasma/Wallpaper"
+        ],
+        "Version": "1.0.0",
+        "Website": "https://github.com/kabegame/kabegame"
+    },
+    "X-Plasma-MainScript": "ui/main.qml"
+}
