@@ -54,13 +54,6 @@ sudo pacman -S cmake extra-cmake-modules plasma-framework qt5-declarative
 
 ```bash
 cd src-plasma-wallpaper-plugin
-./install-cpp.sh
-```
-
-### 方法 2：纯 QML 版本（简易安装）
-
-```bash
-cd src-plasma-wallpaper-plugin
 ./install.sh
 ```
 
