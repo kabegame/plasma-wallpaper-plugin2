@@ -6,58 +6,46 @@
   <kcfgfile name=""/>
 
   <group name="General">
-    <!-- 壁纸路径 -->
+    <!-- 壁纸路径（支持文件或文件夹） -->
     <entry name="Image" type="String">
       <default></default>
-      <label>Wallpaper image path</label>
-    </entry>
-    
-    <!-- 壁纸文件夹路径（用于轮播） -->
-    <entry name="ImageFolder" type="String">
-      <default></default>
-      <label>Wallpaper folder path for slideshow</label>
+      <label>壁纸路径（图片或文件夹）</label>
     </entry>
     
     <!-- 填充模式：fill, fit, stretch, center, tile -->
     <entry name="FillMode" type="String">
       <default>fill</default>
-      <label>Fill mode</label>
+      <label>填充模式</label>
     </entry>
     
-    <!-- 过渡效果：none, fade, slide, zoom, rotate -->
+    <!-- 过渡效果：none, fade, slide, zoom -->
     <entry name="Transition" type="String">
       <default>fade</default>
-      <label>Transition effect</label>
+      <label>过渡效果</label>
     </entry>
     
     <!-- 过渡时长（毫秒） -->
     <entry name="TransitionDuration" type="Int">
       <default>500</default>
-      <label>Transition duration in milliseconds</label>
-    </entry>
-    
-    <!-- 是否启用轮播 -->
-    <entry name="SlideshowEnabled" type="Bool">
-      <default>false</default>
-      <label>Enable slideshow</label>
+      <label>过渡时长（毫秒）</label>
     </entry>
     
     <!-- 轮播间隔（秒） -->
     <entry name="SlideshowInterval" type="Int">
       <default>60</default>
-      <label>Slideshow interval in seconds</label>
+      <label>轮播间隔（秒）</label>
     </entry>
     
     <!-- 轮播顺序：random, sequential -->
     <entry name="SlideshowOrder" type="String">
       <default>random</default>
-      <label>Slideshow order</label>
+      <label>轮播顺序</label>
     </entry>
     
     <!-- 是否连接到 Kabegame 后台 -->
     <entry name="KabegameBridgeEnabled" type="Bool">
       <default>false</default>
-      <label>Enable Kabegame Bridge</label>
+      <label>启用 Kabegame Bridge</label>
     </entry>
   </group>
 </kcfg>
