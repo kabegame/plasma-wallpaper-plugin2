@@ -175,15 +175,24 @@ ColumnLayout {
         CheckBox {
             id: bridgeCheckBox
             Kirigami.FormData.label: i18n("Kabegame 集成：")
-            text: i18n("启用 Kabegame Bridge（需要 Kabegame 运行中）")
+            text: i18n("启用 Kabegame Bridge (D-Bus)")
         }
         
         Label {
             Layout.fillWidth: true
-            text: i18n("启用后，插件将与 Kabegame 同步，实现壁纸自动更新。")
+            text: i18n("启用后，插件通过 D-Bus 与 Kabegame Daemon 通信，自动同步：\n• 壁纸图片路径\n• 填充模式和过渡效果\n• 轮播设置")
             wrapMode: Text.WordWrap
             font.pointSize: Kirigami.Theme.smallFont.pointSize
             opacity: 0.7
+        }
+        
+        Label {
+            Layout.fillWidth: true
+            text: bridgeCheckBox.checked ? i18n("⚠ 需要先启动 Kabegame Daemon") : ""
+            wrapMode: Text.WordWrap
+            font.pointSize: Kirigami.Theme.smallFont.pointSize
+            color: Kirigami.Theme.neutralTextColor
+            visible: bridgeCheckBox.checked
         }
     }
     

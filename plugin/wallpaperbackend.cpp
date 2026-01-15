@@ -8,7 +8,15 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <QRandomGenerator>
+#include <QDBusConnection>
+#include <QDBusReply>
+#include <QDBusMessage>
 #include <algorithm>
+
+// D-Bus 配置
+static const QString DBUS_SERVICE = "org.kabegame.Daemon";
+static const QString DBUS_PATH = "/org/kabegame/Daemon";
+static const QString DBUS_INTERFACE = "org.kabegame.Daemon";
 
 // 支持的图片扩展名
 const QStringList WallpaperBackend::s_imageExtensions = {
@@ -20,6 +28,7 @@ WallpaperBackend::WallpaperBackend(QObject *parent)
     : QObject(parent)
     , m_slideshowTimer(new QTimer(this))
     , m_watcher(new QFileSystemWatcher(this))
+    , m_bridgeCheckTimer(new QTimer(this))
 {
     qDebug() << "[Kabegame] WallpaperBackend 初始化";
     
@@ -28,11 +37,295 @@ WallpaperBackend::WallpaperBackend(QObject *parent)
     
     // 连接文件系统监视器
     connect(m_watcher, &QFileSystemWatcher::directoryChanged, this, &WallpaperBackend::onDirectoryChanged);
+    
+    // Bridge 连接检查定时器
+    connect(m_bridgeCheckTimer, &QTimer::timeout, this, &WallpaperBackend::onBridgeCheckTimer);
+    m_bridgeCheckTimer->setInterval(5000);
+    
+    // 初始化 D-Bus
+    initDBus();
 }
 
 WallpaperBackend::~WallpaperBackend()
 {
     qDebug() << "[Kabegame] WallpaperBackend 销毁";
+    
+    if (m_dbusInterface) {
+        delete m_dbusInterface;
+        m_dbusInterface = nullptr;
+    }
+}
+
+void WallpaperBackend::initDBus()
+{
+    m_dbusInterface = new QDBusInterface(
+        DBUS_SERVICE,
+        DBUS_PATH,
+        DBUS_INTERFACE,
+        QDBusConnection::sessionBus(),
+        this
+    );
+    
+    if (m_dbusInterface->isValid()) {
+        qDebug() << "[Kabegame] D-Bus 接口已创建";
+    } else {
+        qDebug() << "[Kabegame] D-Bus 接口创建失败（Daemon 可能未运行）";
+    }
+}
+
+QJsonObject WallpaperBackend::sendDBusRequest(const QJsonObject &request)
+{
+    if (!m_dbusInterface || !m_dbusInterface->isValid()) {
+        // 尝试重新连接
+        if (m_dbusInterface) {
+            delete m_dbusInterface;
+        }
+        m_dbusInterface = new QDBusInterface(
+            DBUS_SERVICE,
+            DBUS_PATH,
+            DBUS_INTERFACE,
+            QDBusConnection::sessionBus(),
+            this
+        );
+        
+        if (!m_dbusInterface->isValid()) {
+            return QJsonObject{{"ok", false}, {"message", "D-Bus interface not available"}};
+        }
+    }
+    
+    // 序列化请求为 JSON 字符串
+    QJsonDocument doc(request);
+    QString jsonStr = QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+    
+    // 调用 D-Bus Request 方法
+    QDBusReply<QString> reply = m_dbusInterface->call("Request", jsonStr);
+    
+    if (!reply.isValid()) {
+        qDebug() << "[Kabegame] D-Bus 调用失败:" << reply.error().message();
+        return QJsonObject{{"ok", false}, {"message", reply.error().message()}};
+    }
+    
+    // 解析响应
+    QString responseStr = reply.value();
+    QJsonParseError parseError;
+    QJsonDocument responseDoc = QJsonDocument::fromJson(responseStr.toUtf8(), &parseError);
+    
+    if (parseError.error != QJsonParseError::NoError) {
+        qDebug() << "[Kabegame] JSON 解析失败:" << parseError.errorString();
+        return QJsonObject{{"ok", false}, {"message", parseError.errorString()}};
+    }
+    
+    return responseDoc.object();
+}
+
+void WallpaperBackend::connectToDaemon()
+{
+    qDebug() << "[Kabegame] 尝试连接到 Daemon...";
+    
+    // 发送 status 请求探活
+    QJsonObject request{{"cmd", "status"}};
+    QJsonObject response = sendDBusRequest(request);
+    
+    bool wasConnected = m_bridgeConnected;
+    m_bridgeConnected = response["ok"].toBool(false);
+    
+    if (m_bridgeConnected) {
+        QJsonObject info = response["info"].toObject();
+        QString version = info["version"].toString("?");
+        qDebug() << "[Kabegame] 已连接到 Daemon v" << version;
+        
+        // 连接成功，同步设置
+        syncFromDaemon();
+    } else {
+        qDebug() << "[Kabegame] 无法连接到 Daemon:" << response["message"].toString();
+    }
+    
+    if (wasConnected != m_bridgeConnected) {
+        Q_EMIT bridgeConnectedChanged();
+    }
+}
+
+void WallpaperBackend::syncFromDaemon()
+{
+    if (!m_bridgeConnected) {
+        return;
+    }
+    
+    qDebug() << "[Kabegame] 从 Daemon 同步设置...";
+    
+    // 获取所有设置
+    QJsonObject request{{"cmd", "settingsGet"}};
+    QJsonObject response = sendDBusRequest(request);
+    
+    if (!response["ok"].toBool(false)) {
+        qDebug() << "[Kabegame] 获取设置失败:" << response["message"].toString();
+        return;
+    }
+    
+    QJsonObject data = response["data"].toObject();
+    
+    // 同步填充模式
+    QString newFillMode = data["wallpaperRotationStyle"].toString("fill");
+    if (m_bridgeFillMode != newFillMode) {
+        m_bridgeFillMode = newFillMode;
+        Q_EMIT effectiveFillModeChanged();
+        qDebug() << "[Kabegame] 同步填充模式:" << m_bridgeFillMode;
+    }
+    
+    // 同步过渡效果
+    QString newTransition = data["wallpaperRotationTransition"].toString("fade");
+    if (m_bridgeTransition != newTransition) {
+        m_bridgeTransition = newTransition;
+        Q_EMIT effectiveTransitionChanged();
+        qDebug() << "[Kabegame] 同步过渡效果:" << m_bridgeTransition;
+    }
+    
+    // 同步轮播间隔（分钟转秒）
+    int newInterval = data["wallpaperRotationIntervalMinutes"].toInt(60) * 60;
+    if (m_bridgeSlideshowInterval != newInterval) {
+        m_bridgeSlideshowInterval = newInterval;
+        qDebug() << "[Kabegame] 同步轮播间隔:" << m_bridgeSlideshowInterval << "秒";
+        
+        // 如果正在使用 Bridge 轮播，更新定时器
+        if (m_bridgeEnabled && m_slideshowTimer->isActive()) {
+            m_slideshowTimer->setInterval(m_bridgeSlideshowInterval * 1000);
+        }
+    }
+    
+    // 同步轮播顺序
+    QString newOrder = data["wallpaperRotationMode"].toString("random");
+    if (m_bridgeSlideshowOrder != newOrder) {
+        m_bridgeSlideshowOrder = newOrder;
+        Q_EMIT effectiveSlideshowOrderChanged();
+        qDebug() << "[Kabegame] 同步轮播顺序:" << m_bridgeSlideshowOrder;
+    }
+    
+    // 获取当前壁纸
+    QString currentImageId = data["currentWallpaperImageId"].toString();
+    if (!currentImageId.isEmpty()) {
+        loadCurrentWallpaperFromDaemon(currentImageId);
+    }
+    
+    // 获取轮播画册图片
+    QString albumId = data["wallpaperRotationAlbumId"].toString();
+    loadAlbumImagesFromDaemon(albumId);
+}
+
+void WallpaperBackend::loadCurrentWallpaperFromDaemon(const QString &imageId)
+{
+    QJsonObject request{{"cmd", "storageGetImageById"}, {"imageId", imageId}};
+    QJsonObject response = sendDBusRequest(request);
+    
+    if (response["ok"].toBool(false)) {
+        QJsonObject data = response["data"].toObject();
+        QString localPath = data["localPath"].toString();
+        if (!localPath.isEmpty()) {
+            qDebug() << "[Kabegame] 从 Daemon 获取当前壁纸:" << localPath;
+            m_currentWallpaper = localPath;
+            Q_EMIT currentWallpaperChanged();
+            Q_EMIT wallpaperChangeRequested(m_currentWallpaper);
+        }
+    }
+}
+
+void WallpaperBackend::loadAlbumImagesFromDaemon(const QString &albumId)
+{
+    QJsonObject request;
+    if (albumId.isEmpty()) {
+        // 全画廊
+        request = QJsonObject{{"cmd", "storageGetImages"}};
+    } else {
+        request = QJsonObject{{"cmd", "storageGetAlbumImages"}, {"albumId", albumId}};
+    }
+    
+    QJsonObject response = sendDBusRequest(request);
+    
+    if (!response["ok"].toBool(false)) {
+        qDebug() << "[Kabegame] 获取画册图片失败:" << response["message"].toString();
+        return;
+    }
+    
+    QJsonObject data = response["data"].toObject();
+    QJsonArray imagesArray = data["images"].toArray();
+    if (imagesArray.isEmpty()) {
+        // 尝试直接从 data 获取（storageGetImages 返回格式可能不同）
+        imagesArray = response["data"].toArray();
+    }
+    
+    QStringList paths;
+    for (const QJsonValue &val : imagesArray) {
+        QJsonObject img = val.toObject();
+        QString path = img["localPath"].toString();
+        if (!path.isEmpty()) {
+            paths.append(path);
+        }
+    }
+    
+    if (!paths.isEmpty()) {
+        qDebug() << "[Kabegame] 从 Daemon 加载" << paths.size() << "张画册图片";
+        m_imageList = paths;
+        Q_EMIT imageListChanged();
+        
+        // 启动轮播
+        if (paths.size() > 1) {
+            startSlideshow();
+        }
+    }
+}
+
+void WallpaperBackend::setBridgeEnabled(bool enabled)
+{
+    if (m_bridgeEnabled == enabled) {
+        return;
+    }
+    
+    qDebug() << "[Kabegame] Bridge 启用状态:" << enabled;
+    
+    m_bridgeEnabled = enabled;
+    Q_EMIT bridgeEnabledChanged();
+    
+    if (enabled) {
+        // 启用 Bridge
+        stopSlideshow();  // 停止本地轮播
+        connectToDaemon();
+        m_bridgeCheckTimer->start();  // 启动连接检查
+    } else {
+        // 禁用 Bridge
+        m_bridgeCheckTimer->stop();
+        m_bridgeConnected = false;
+        Q_EMIT bridgeConnectedChanged();
+        
+        // 恢复本地模式
+        Q_EMIT effectiveFillModeChanged();
+        Q_EMIT effectiveTransitionChanged();
+        Q_EMIT effectiveSlideshowOrderChanged();
+        
+        if (m_isFolder && m_imageList.size() > 1) {
+            startSlideshow();
+        }
+    }
+}
+
+void WallpaperBackend::onBridgeCheckTimer()
+{
+    if (!m_bridgeConnected) {
+        connectToDaemon();
+    }
+}
+
+QString WallpaperBackend::effectiveFillMode() const
+{
+    return (m_bridgeEnabled && m_bridgeConnected) ? m_bridgeFillMode : m_fillMode;
+}
+
+QString WallpaperBackend::effectiveTransition() const
+{
+    return (m_bridgeEnabled && m_bridgeConnected) ? m_bridgeTransition : m_transition;
+}
+
+QString WallpaperBackend::effectiveSlideshowOrder() const
+{
+    return (m_bridgeEnabled && m_bridgeConnected) ? m_bridgeSlideshowOrder : m_slideshowOrder;
 }
 
 void WallpaperBackend::setPath(const QString &path)
@@ -59,6 +352,11 @@ void WallpaperBackend::setPath(const QString &path)
     Q_EMIT pathChanged();
     
     updateIsFolder();
+    
+    // 如果启用了 Bridge 且已连接，不使用本地文件列表
+    if (m_bridgeEnabled && m_bridgeConnected) {
+        return;
+    }
     
     if (m_isFolder) {
         loadImageList();
@@ -93,8 +391,8 @@ void WallpaperBackend::setSlideshowInterval(int interval)
     m_slideshowInterval = interval;
     Q_EMIT slideshowIntervalChanged();
     
-    // 更新定时器间隔
-    if (m_slideshowTimer->isActive()) {
+    // 更新定时器间隔（仅当不使用 Bridge 时）
+    if (!m_bridgeEnabled && m_slideshowTimer->isActive()) {
         m_slideshowTimer->setInterval(m_slideshowInterval * 1000);
     }
 }
@@ -109,6 +407,7 @@ void WallpaperBackend::setSlideshowOrder(const QString &order)
     
     m_slideshowOrder = order;
     Q_EMIT slideshowOrderChanged();
+    Q_EMIT effectiveSlideshowOrderChanged();
 }
 
 void WallpaperBackend::setFillMode(const QString &mode)
@@ -119,6 +418,7 @@ void WallpaperBackend::setFillMode(const QString &mode)
     
     m_fillMode = mode;
     Q_EMIT fillModeChanged();
+    Q_EMIT effectiveFillModeChanged();
 }
 
 void WallpaperBackend::setTransition(const QString &transition)
@@ -129,6 +429,7 @@ void WallpaperBackend::setTransition(const QString &transition)
     
     m_transition = transition;
     Q_EMIT transitionChanged();
+    Q_EMIT effectiveTransitionChanged();
 }
 
 void WallpaperBackend::setTransitionDuration(int duration)
@@ -147,29 +448,25 @@ void WallpaperBackend::setTransitionDuration(int duration)
 void WallpaperBackend::nextWallpaper()
 {
     if (m_imageList.isEmpty()) {
-        qDebug() << "[Kabegame] nextWallpaper: 图片列表为空";
         return;
     }
     
     if (m_imageList.size() == 1) {
-        qDebug() << "[Kabegame] nextWallpaper: 只有一张图片";
         return;
     }
     
     int newIndex;
+    QString order = effectiveSlideshowOrder();
     
-    if (m_slideshowOrder == "random") {
+    if (order == "random") {
         // 随机选择一张不同的图片
         int attempts = 0;
         do {
             newIndex = QRandomGenerator::global()->bounded(m_imageList.size());
             attempts++;
         } while (newIndex == m_currentIndex && attempts < 10);
-        
-        qDebug() << "[Kabegame] 随机选择索引:" << newIndex;
     } else {
         newIndex = (m_currentIndex + 1) % m_imageList.size();
-        qDebug() << "[Kabegame] 顺序选择索引:" << newIndex;
     }
     
     setWallpaperByIndex(newIndex);
@@ -192,14 +489,11 @@ void WallpaperBackend::previousWallpaper()
 void WallpaperBackend::setWallpaperByIndex(int index)
 {
     if (index < 0 || index >= m_imageList.size()) {
-        qDebug() << "[Kabegame] 无效索引:" << index;
         return;
     }
     
     m_currentIndex = index;
     m_currentWallpaper = m_imageList.at(index);
-    
-    qDebug() << "[Kabegame] 切换壁纸:" << m_currentWallpaper;
     
     Q_EMIT currentWallpaperChanged();
     Q_EMIT wallpaperChangeRequested(m_currentWallpaper);
@@ -207,20 +501,27 @@ void WallpaperBackend::setWallpaperByIndex(int index)
 
 void WallpaperBackend::refreshImageList()
 {
-    if (m_isFolder) {
+    if (m_bridgeEnabled && m_bridgeConnected) {
+        syncFromDaemon();
+    } else if (m_isFolder) {
         loadImageList();
     }
 }
 
 void WallpaperBackend::onSlideshowTimer()
 {
-    qDebug() << "[Kabegame] 定时器触发";
     nextWallpaper();
 }
 
 void WallpaperBackend::onDirectoryChanged(const QString &path)
 {
     Q_UNUSED(path)
+    
+    // 如果使用 Bridge，不监视本地文件夹变化
+    if (m_bridgeEnabled && m_bridgeConnected) {
+        return;
+    }
+    
     qDebug() << "[Kabegame] 文件夹内容变化，刷新图片列表";
     loadImageList();
 }
@@ -245,7 +546,6 @@ void WallpaperBackend::updateIsFolder()
         m_isFolder = !s_imageExtensions.contains(suffix, Qt::CaseInsensitive);
     }
     
-    qDebug() << "[Kabegame] 路径类型:" << (m_isFolder ? "文件夹" : "单文件");
     Q_EMIT isFolderChanged();
 }
 
@@ -263,8 +563,6 @@ void WallpaperBackend::loadImageList()
         stopSlideshow();
         return;
     }
-    
-    qDebug() << "[Kabegame] 加载文件夹:" << m_path;
     
     // 构建过滤器
     QStringList filters;
@@ -284,11 +582,6 @@ void WallpaperBackend::loadImageList()
     }
     
     qDebug() << "[Kabegame] 找到" << newList.size() << "张图片";
-    
-    // 打印前几张图片路径（调试用）
-    for (int i = 0; i < qMin(5, newList.size()); i++) {
-        qDebug() << "[Kabegame]   -" << newList.at(i);
-    }
     
     m_imageList = newList;
     Q_EMIT imageListChanged();
@@ -310,11 +603,9 @@ void WallpaperBackend::loadImageList()
         Q_EMIT wallpaperChangeRequested(m_currentWallpaper);
     }
     
-    // 启动轮播
-    if (m_imageList.size() > 1) {
+    // 启动轮播（仅当不使用 Bridge 时）
+    if (!m_bridgeEnabled && m_imageList.size() > 1) {
         startSlideshow();
-    } else {
-        stopSlideshow();
     }
 }
 
@@ -324,8 +615,12 @@ void WallpaperBackend::startSlideshow()
         return;
     }
     
-    qDebug() << "[Kabegame] 启动轮播定时器，间隔:" << m_slideshowInterval << "秒";
-    m_slideshowTimer->setInterval(m_slideshowInterval * 1000);
+    int interval = (m_bridgeEnabled && m_bridgeConnected) 
+        ? m_bridgeSlideshowInterval 
+        : m_slideshowInterval;
+    
+    qDebug() << "[Kabegame] 启动轮播定时器，间隔:" << interval << "秒";
+    m_slideshowTimer->setInterval(interval * 1000);
     m_slideshowTimer->start();
 }
 

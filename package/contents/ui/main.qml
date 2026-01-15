@@ -1,6 +1,8 @@
 /*
- * Kabegame Wallpaper Plugin - Main QML (C++ Backend Version)
+ * Kabegame Wallpaper Plugin
  * Copyright (C) 2024 Kabegame Team
+ * 
+ * QML 只负责 UI 展示，业务逻辑在 C++ 后端
  */
 
 import QtQuick 2.15
@@ -11,205 +13,240 @@ import org.kabegame.wallpaper 1.0
 Item {
     id: root
     
-    // 配置属性
-    readonly property string configPath: wallpaper.configuration.Image || ""
-    readonly property string fillMode: wallpaper.configuration.FillMode || "fill"
-    readonly property string transition: wallpaper.configuration.Transition || "fade"
-    readonly property int transitionDuration: wallpaper.configuration.TransitionDuration || 500
-    readonly property int slideshowInterval: wallpaper.configuration.SlideshowInterval || 60
-    readonly property string slideshowOrder: wallpaper.configuration.SlideshowOrder || "random"
+    // 安全读取配置
+    readonly property var cfg: wallpaper && wallpaper.configuration ? wallpaper.configuration : null
+    readonly property string configPath: cfg ? (cfg.Image || "") : ""
+    readonly property string configFillMode: cfg ? (cfg.FillMode || "fill") : "fill"
+    readonly property string configTransition: cfg ? (cfg.Transition || "fade") : "fade"
+    readonly property int configTransitionDuration: cfg ? (cfg.TransitionDuration || 500) : 500
+    readonly property int configSlideshowInterval: cfg ? (cfg.SlideshowInterval || 60) : 60
+    readonly property string configSlideshowOrder: cfg ? (cfg.SlideshowOrder || "random") : "random"
+    readonly property bool configBridgeEnabled: cfg ? (cfg.KabegameBridgeEnabled || false) : false
     
     // C++ 后端
     WallpaperBackend {
         id: backend
         
-        // 绑定配置
-        path: configPath
-        slideshowInterval: root.slideshowInterval
-        slideshowOrder: root.slideshowOrder
-        fillMode: root.fillMode
-        transition: root.transition
-        transitionDuration: root.transitionDuration
+        // 绑定配置属性
+        path: root.configPath
+        fillMode: root.configFillMode
+        transition: root.configTransition
+        transitionDuration: root.configTransitionDuration
+        slideshowInterval: root.configSlideshowInterval
+        slideshowOrder: root.configSlideshowOrder
+        bridgeEnabled: root.configBridgeEnabled
         
-        // 壁纸切换请求
+        // 处理壁纸切换请求
         onWallpaperChangeRequested: function(newWallpaper) {
-            console.log("[QML] 收到壁纸切换请求:", newWallpaper)
             switchWallpaper(newWallpaper)
         }
     }
     
-    // 当前显示的壁纸源
-    property string currentImageSource: ""
+    // 内部状态
+    property bool isTransitioning: false
+    property int activeImage: 0  // 0 = imageA, 1 = imageB
+    property bool pendingNoTransition: false  // 等待无过渡切换
     
-    // 双图层用于过渡
+    // 获取 QML Image.fillMode
+    function getImageFillMode() {
+        switch (backend.effectiveFillMode) {
+            case "fill": return Image.PreserveAspectCrop
+            case "fit": return Image.PreserveAspectFit
+            case "stretch": return Image.Stretch
+            case "center": return Image.Pad
+            case "tile": return Image.Tile
+            default: return Image.PreserveAspectCrop
+        }
+    }
+    
+    // 壁纸容器
     Item {
         id: wallpaperContainer
         anchors.fill: parent
         clip: true
         
-        // 底层图片（当前显示的）
         Image {
-            id: baseImage
+            id: imageA
             anchors.fill: parent
-            source: currentImageSource ? "file://" + currentImageSource : ""
             asynchronous: true
-            cache: false
+            cache: true
             smooth: true
-            
-            fillMode: {
-                switch (root.fillMode) {
-                    case "fill": return Image.PreserveAspectCrop
-                    case "fit": return Image.PreserveAspectFit
-                    case "stretch": return Image.Stretch
-                    case "center": return Image.Pad
-                    case "tile": return Image.Tile
-                    default: return Image.PreserveAspectCrop
-                }
-            }
-            
+            fillMode: getImageFillMode()
             horizontalAlignment: Image.AlignHCenter
             verticalAlignment: Image.AlignVCenter
+            opacity: 1
+            z: activeImage === 0 ? 1 : 0
+            
+            transform: Translate {
+                id: slideTransformA
+                x: 0
+            }
+            scale: 1.0
             
             onStatusChanged: {
-                if (status === Image.Error) {
-                    console.log("[QML] baseImage 加载失败:", source)
-                } else if (status === Image.Ready) {
-                    console.log("[QML] baseImage 加载成功")
+                if (status === Image.Ready && pendingNoTransition && activeImage === 1) {
+                    // imageA 加载完成，执行无过渡切换
+                    pendingNoTransition = false
+                    imageA.opacity = 1
+                    imageB.opacity = 0
+                    activeImage = 0
                 }
             }
         }
         
-        // 顶层图片（用于过渡）
         Image {
-            id: topImage
+            id: imageB
             anchors.fill: parent
             asynchronous: true
-            cache: false
+            cache: true
             smooth: true
-            opacity: 0
-            visible: opacity > 0
-            
-            fillMode: baseImage.fillMode
+            fillMode: getImageFillMode()
             horizontalAlignment: Image.AlignHCenter
             verticalAlignment: Image.AlignVCenter
+            opacity: 1
+            z: activeImage === 1 ? 1 : 0
             
             transform: Translate {
-                id: slideTransform
+                id: slideTransformB
                 x: 0
             }
-            
             scale: 1.0
+            
+            onStatusChanged: {
+                if (status === Image.Ready && pendingNoTransition && activeImage === 0) {
+                    // imageB 加载完成，执行无过渡切换
+                    pendingNoTransition = false
+                    imageB.opacity = 1
+                    imageA.opacity = 0
+                    activeImage = 1
+                }
+            }
         }
     }
     
-    // 过渡动画
+    // 过渡动画 - A 淡入
     ParallelAnimation {
-        id: transitionAnimation
+        id: transitionToA
         
         NumberAnimation {
-            target: topImage
-            property: "opacity"
-            from: 0
-            to: 1
-            duration: root.transitionDuration
-            easing.type: Easing.InOutQuad
+            target: imageA; property: "opacity"; to: 1
+            duration: backend.transitionDuration; easing.type: Easing.InOutQuad
         }
-        
         NumberAnimation {
-            id: slideAnimation
-            target: slideTransform
-            property: "x"
-            duration: root.transitionDuration
-            easing.type: Easing.InOutCubic
-            running: false
+            target: imageB; property: "opacity"; to: 0
+            duration: backend.transitionDuration; easing.type: Easing.InOutQuad
         }
-        
         NumberAnimation {
-            id: zoomAnimation
-            target: topImage
-            property: "scale"
-            duration: root.transitionDuration
-            easing.type: Easing.InOutQuad
-            running: false
+            id: slideAnimationA; target: slideTransformA; property: "x"; to: 0
+            duration: backend.transitionDuration; easing.type: Easing.InOutCubic
+        }
+        NumberAnimation {
+            id: zoomAnimationA; target: imageA; property: "scale"; to: 1.0
+            duration: backend.transitionDuration; easing.type: Easing.InOutQuad
         }
         
         onFinished: {
-            baseImage.source = topImage.source
-            currentImageSource = topImage.source.toString().replace("file://", "")
-            
-            topImage.opacity = 0
-            topImage.scale = 1.0
-            slideTransform.x = 0
+            activeImage = 0
+            isTransitioning = false
+            slideTransformB.x = 0
+            imageB.scale = 1.0
         }
     }
     
-    // 切换壁纸函数
-    function switchWallpaper(newSource) {
-        if (!newSource) {
-            return
+    // 过渡动画 - B 淡入
+    ParallelAnimation {
+        id: transitionToB
+        
+        NumberAnimation {
+            target: imageB; property: "opacity"; to: 1
+            duration: backend.transitionDuration; easing.type: Easing.InOutQuad
         }
+        NumberAnimation {
+            target: imageA; property: "opacity"; to: 0
+            duration: backend.transitionDuration; easing.type: Easing.InOutQuad
+        }
+        NumberAnimation {
+            id: slideAnimationB; target: slideTransformB; property: "x"; to: 0
+            duration: backend.transitionDuration; easing.type: Easing.InOutCubic
+        }
+        NumberAnimation {
+            id: zoomAnimationB; target: imageB; property: "scale"; to: 1.0
+            duration: backend.transitionDuration; easing.type: Easing.InOutQuad
+        }
+        
+        onFinished: {
+            activeImage = 1
+            isTransitioning = false
+            slideTransformA.x = 0
+            imageA.scale = 1.0
+        }
+    }
+    
+    // 切换壁纸
+    function switchWallpaper(newSource) {
+        if (!newSource) return
+        if (isTransitioning) return
         
         var newSourceUrl = "file://" + newSource
+        var currentUrl = activeImage === 0 ? imageA.source.toString() : imageB.source.toString()
+        if (newSourceUrl === currentUrl) return
         
-        if (newSourceUrl === baseImage.source.toString()) {
+        var targetImage = activeImage === 0 ? imageB : imageA
+        var targetAnim = activeImage === 0 ? transitionToB : transitionToA
+        var targetSlide = activeImage === 0 ? slideTransformB : slideTransformA
+        var targetSlideAnim = activeImage === 0 ? slideAnimationB : slideAnimationA
+        var targetZoomAnim = activeImage === 0 ? zoomAnimationB : zoomAnimationA
+        
+        // 首次加载
+        if (imageA.source.toString() === "" && imageB.source.toString() === "") {
+            imageA.source = newSourceUrl
+            imageA.opacity = 1
+            imageB.opacity = 0
+            activeImage = 0
             return
         }
         
-        console.log("[QML] 切换壁纸:", newSource)
+        targetImage.source = newSourceUrl
         
-        // 首次加载直接设置
-        if (!currentImageSource) {
-            currentImageSource = newSource
-            baseImage.source = newSourceUrl
-            return
-        }
-        
-        // 准备过渡
-        topImage.source = newSourceUrl
-        
-        switch (root.transition) {
+        switch (backend.effectiveTransition) {
             case "none":
-                currentImageSource = newSource
-                baseImage.source = newSourceUrl
-                break
-                
-            case "fade":
-                slideAnimation.running = false
-                zoomAnimation.running = false
-                transitionAnimation.start()
-                break
+                // 等待新图片加载完成再切换，避免闪烁
+                if (targetImage.status === Image.Ready) {
+                    // 已加载，直接切换
+                    targetImage.opacity = 1
+                    if (activeImage === 0) {
+                        imageA.opacity = 0
+                        activeImage = 1
+                    } else {
+                        imageB.opacity = 0
+                        activeImage = 0
+                    }
+                } else {
+                    // 等待加载完成
+                    pendingNoTransition = true
+                }
+                return
                 
             case "slide":
-                slideAnimation.running = true
-                zoomAnimation.running = false
-                slideTransform.x = root.width
-                slideAnimation.from = root.width
-                slideAnimation.to = 0
-                transitionAnimation.start()
+                targetSlide.x = root.width
+                targetSlideAnim.from = root.width
+                targetSlideAnim.to = 0
                 break
                 
             case "zoom":
-                slideAnimation.running = false
-                zoomAnimation.running = true
-                topImage.scale = 0.8
-                zoomAnimation.from = 0.8
-                zoomAnimation.to = 1.0
-                transitionAnimation.start()
+                targetImage.scale = 0.8
+                targetZoomAnim.from = 0.8
+                targetZoomAnim.to = 1.0
                 break
-                
-            default:
-                slideAnimation.running = false
-                zoomAnimation.running = false
-                transitionAnimation.start()
         }
+        
+        targetImage.opacity = 0
+        isTransitioning = true
+        targetAnim.start()
     }
     
     // 初始化
     Component.onCompleted: {
-        console.log("[QML] Kabegame 壁纸插件已加载 (C++ 后端版本)")
-        console.log("[QML] 路径:", configPath)
-        console.log("[QML] 填充模式:", fillMode)
-        console.log("[QML] 过渡效果:", transition)
-        console.log("[QML] 轮播间隔:", slideshowInterval, "秒")
+        console.log("========== Kabegame 壁纸插件已加载 ==========")
     }
 }

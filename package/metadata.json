@@ -6,8 +6,8 @@
                 "Name": "Kabegame Team"
             }
         ],
-        "Description": "Kabegame 壁纸插件 - 支持过渡效果、轮播和多种填充模式",
-        "Description[zh_CN]": "Kabegame 壁纸插件 - 支持过渡效果、轮播和多种填充模式",
+        "Description": "Kabegame 壁纸插件 - 支持过渡效果、轮播和 Kabegame Bridge",
+        "Description[zh_CN]": "Kabegame 壁纸插件 - 支持过渡效果、轮播和 Kabegame Bridge",
         "Icon": "preferences-desktop-wallpaper",
         "Id": "org.kabegame.wallpaper",
         "License": "MIT",
@@ -16,8 +16,9 @@
         "ServiceTypes": [
             "Plasma/Wallpaper"
         ],
-        "Version": "2.0.0",
+        "Version": "2.1.0",
         "Website": "https://github.com/kabegame/kabegame"
     },
+    "X-KDE-ParentApp": "org.kde.plasmashell",
     "X-Plasma-MainScript": "ui/main.qml"
 }

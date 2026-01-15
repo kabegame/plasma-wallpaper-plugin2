@@ -7,6 +7,9 @@ set(wallpaper_SRCS
 
 add_library(plasma_wallpaper_kabegame MODULE ${wallpaper_SRCS})
 
+# 设置库文件前缀为 lib（Qt QML 插件加载器需要）
+set_target_properties(plasma_wallpaper_kabegame PROPERTIES PREFIX "lib")
+
 target_link_libraries(plasma_wallpaper_kabegame
     Qt5::Core
     Qt5::Quick
