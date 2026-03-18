@@ -6,46 +6,10 @@
   <kcfgfile name=""/>
 
   <group name="General">
-    <!-- 壁纸路径（支持文件或文件夹） -->
+    <!-- 仅保留 Image 配置，其他参数由 Kabegame 设置事件驱动 -->
     <entry name="Image" type="String">
       <default></default>
-      <label>壁纸路径（图片或文件夹）</label>
-    </entry>
-    
-    <!-- 填充模式：fill, fit, stretch, center, tile -->
-    <entry name="FillMode" type="String">
-      <default>fill</default>
-      <label>填充模式</label>
-    </entry>
-    
-    <!-- 过渡效果：none, fade, slide, zoom -->
-    <entry name="Transition" type="String">
-      <default>fade</default>
-      <label>过渡效果</label>
-    </entry>
-    
-    <!-- 过渡时长（毫秒） -->
-    <entry name="TransitionDuration" type="Int">
-      <default>500</default>
-      <label>过渡时长（毫秒）</label>
-    </entry>
-    
-    <!-- 轮播间隔（秒） -->
-    <entry name="SlideshowInterval" type="Int">
-      <default>60</default>
-      <label>轮播间隔（秒）</label>
-    </entry>
-    
-    <!-- 轮播顺序：random, sequential -->
-    <entry name="SlideshowOrder" type="String">
-      <default>random</default>
-      <label>轮播顺序</label>
-    </entry>
-    
-    <!-- 是否连接到 Kabegame 后台 -->
-    <entry name="KabegameBridgeEnabled" type="Bool">
-      <default>false</default>
-      <label>启用 Kabegame Bridge</label>
+      <label>壁纸路径（图片或视频）</label>
     </entry>
   </group>
 </kcfg>

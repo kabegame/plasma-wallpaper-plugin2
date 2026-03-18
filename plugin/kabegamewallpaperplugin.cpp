@@ -4,7 +4,9 @@
  */
 
 #include "wallpaperbackend.h"
+#include "thumbnailprovider.h"
 
+#include <QDebug>
 #include <QQmlEngine>
 #include <QQmlExtensionPlugin>
 
@@ -22,6 +24,12 @@ public:
         qmlRegisterType<WallpaperBackend>(uri, 1, 0, "WallpaperBackend");
         
         qDebug() << "[Kabegame] 插件已注册: org.kabegame.wallpaper";
+    }
+
+    void initializeEngine(QQmlEngine *engine, const char *uri) override
+    {
+        Q_UNUSED(uri)
+        engine->addImageProvider(QStringLiteral("kabegame"), ThumbnailProvider::instance());
     }
 };
 

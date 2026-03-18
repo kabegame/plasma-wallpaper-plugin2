@@ -16,9 +16,10 @@ include(KDECompilerSettings NO_POLICY_SCOPE)
 
 find_package(Qt5 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS
     Core
+    Network
     Quick
     Qml
-    DBus
+    Multimedia
 )
 
 find_package(KF5 REQUIRED COMPONENTS
@@ -26,6 +27,9 @@ find_package(KF5 REQUIRED COMPONENTS
     I18n
     Package
 )
+
+# 插件版本（.so 名用下划线，如 2_2_0；与 package/metadata.json 中 Version 保持一致）
+set(KABEGAME_WALLPAPER_VERSION "2.2.0" CACHE STRING "Kabegame wallpaper plugin version")
 
 # 添加插件子目录
 add_subdirectory(plugin)

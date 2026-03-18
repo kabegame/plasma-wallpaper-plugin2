@@ -2,8 +2,8 @@
     "KPlugin": {
         "Authors": [
             {
-                "Email": "support@kabegame.com",
-                "Name": "Kabegame Team"
+                "Email": "cmtheit@outlook.com",
+                "Name": "Cmtheit"
             }
         ],
         "Description": "Kabegame 壁纸插件 - 支持过渡效果、轮播和 Kabegame Bridge",
@@ -16,7 +16,7 @@
         "ServiceTypes": [
             "Plasma/Wallpaper"
         ],
-        "Version": "2.1.0",
+        "Version": "2.1.1",
         "Website": "https://github.com/kabegame/kabegame"
     },
     "X-KDE-ParentApp": "org.kde.plasmashell",
