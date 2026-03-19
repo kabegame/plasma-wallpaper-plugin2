@@ -35,12 +35,7 @@ IpcClient::IpcClient(QObject *parent)
     connect(m_socket, &QLocalSocket::connected, this, &IpcClient::onConnected);
     connect(m_socket, &QLocalSocket::disconnected, this, &IpcClient::onDisconnected);
     connect(m_socket, &QLocalSocket::readyRead, this, &IpcClient::onReadyRead);
-    connect(
-        m_socket,
-        QOverload<QLocalSocket::LocalSocketError>::of(&QLocalSocket::errorOccurred),
-        this,
-        &IpcClient::onSocketError
-    );
+    connect(m_socket, &QLocalSocket::errorOccurred, this, &IpcClient::onSocketError);
     connect(m_heartbeatTimer, &QTimer::timeout, this, &IpcClient::onHeartbeatTimer);
     connect(m_reconnectTimer, &QTimer::timeout, this, &IpcClient::onReconnectTimer);
 }
@@ -279,7 +274,11 @@ QString IpcClient::cborToString(const QCborValue &value) const
 
 quint64 IpcClient::readRequestId(const QCborMap &map) const
 {
-    const QCborValue idValue = map.value(QStringLiteral("request_id"));
+    // Daemon 响应使用 serde rename_all = "kebab-case"，键名为 "request-id"
+    QCborValue idValue = map.value(QStringLiteral("request-id"));
+    if (idValue.isUndefined()) {
+        idValue = map.value(QStringLiteral("request_id"));
+    }
     if (idValue.isInteger()) {
         return static_cast<quint64>(idValue.toInteger());
     }

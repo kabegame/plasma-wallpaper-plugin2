@@ -5,6 +5,7 @@
 
 #include <QObject>
 #include <QProcess>
+#include <QUrl>
 #include <QVariantList>
 
 class WallpaperBackend : public QObject
@@ -19,6 +20,7 @@ class WallpaperBackend : public QObject
     Q_PROPERTY(double wallpaperVideoPlaybackRate READ wallpaperVideoPlaybackRate NOTIFY wallpaperVideoPlaybackRateChanged)
     Q_PROPERTY(int wallpaperRotationIntervalMinutes READ wallpaperRotationIntervalMinutes NOTIFY wallpaperRotationIntervalMinutesChanged)
     Q_PROPERTY(QString wallpaperRotationMode READ wallpaperRotationMode NOTIFY wallpaperRotationModeChanged)
+    Q_PROPERTY(QString galleryImageAspectRatio READ galleryImageAspectRatio NOTIFY galleryImageAspectRatioChanged)
     Q_PROPERTY(QVariantList galleryImages READ galleryImages NOTIFY galleryImagesChanged)
     Q_PROPERTY(int galleryTotal READ galleryTotal NOTIFY galleryTotalChanged)
     Q_PROPERTY(int galleryPage READ galleryPage NOTIFY galleryPageChanged)
@@ -36,6 +38,7 @@ public:
     double wallpaperVideoPlaybackRate() const { return m_wallpaperVideoPlaybackRate; }
     int wallpaperRotationIntervalMinutes() const { return m_wallpaperRotationIntervalMinutes; }
     QString wallpaperRotationMode() const { return m_wallpaperRotationMode; }
+    QString galleryImageAspectRatio() const { return m_galleryImageAspectRatio; }
     QVariantList galleryImages() const { return m_galleryImages; }
     int galleryTotal() const { return m_galleryTotal; }
     int galleryPage() const { return m_galleryPage; }
@@ -45,6 +48,8 @@ public:
     Q_INVOKABLE void openKabegame();
     Q_INVOKABLE void loadGalleryPage(int page);
     Q_INVOKABLE void setWallpaperByImageId(const QString &imageId);
+    /// 将本地路径转为带编码的 file:// URL，供 QML Image/Video 正确加载含中文等字符的路径
+    Q_INVOKABLE QString toFileUrl(const QString &path) const;
 
 public Q_SLOTS:
     void syncImageConfig(const QString &path);
@@ -58,6 +63,7 @@ Q_SIGNALS:
     void wallpaperVideoPlaybackRateChanged();
     void wallpaperRotationIntervalMinutesChanged();
     void wallpaperRotationModeChanged();
+    void galleryImageAspectRatioChanged();
     void galleryImagesChanged();
     void galleryTotalChanged();
     void galleryPageChanged();
@@ -89,6 +95,7 @@ private:
     double m_wallpaperVideoPlaybackRate = 1.0;
     int m_wallpaperRotationIntervalMinutes = 60;
     QString m_wallpaperRotationMode = QStringLiteral("random");
+    QString m_galleryImageAspectRatio = QStringLiteral("16:9");
 
     QVariantList m_galleryImages;
     int m_galleryTotal = 0;

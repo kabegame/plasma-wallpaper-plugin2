@@ -20,13 +20,12 @@ set_target_properties(plasma_wallpaper_kabegame PROPERTIES
 )
 
 target_link_libraries(plasma_wallpaper_kabegame
-    Qt5::Core
-    Qt5::Network
-    Qt5::Quick
-    Qt5::Qml
-    Qt5::Multimedia
-    KF5::Plasma
-    KF5::I18n
+    Qt6::Core
+    Qt6::Network
+    Qt6::Quick
+    Qt6::Qml
+    Qt6::Multimedia
+    KF6::I18n
 )
 
 # 安装插件库到 QML 导入路径

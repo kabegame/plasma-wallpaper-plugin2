@@ -24,3 +24,5 @@ Thumbs.db
 
 # cmake build content
 /build/
+
+example/

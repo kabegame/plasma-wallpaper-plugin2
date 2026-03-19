@@ -6,15 +6,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-# 查找依赖
-find_package(ECM REQUIRED NO_MODULE)
+set(QT_MIN_VERSION "6.6.0")
+set(KF6_MIN_VERSION "6.0.0")
+
+find_package(ECM ${KF6_MIN_VERSION} REQUIRED NO_MODULE)
 set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
 
 include(KDEInstallDirs)
 include(KDECMakeSettings)
 include(KDECompilerSettings NO_POLICY_SCOPE)
 
-find_package(Qt5 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS
+find_package(Qt6 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS
     Core
     Network
     Quick
@@ -22,14 +24,12 @@ find_package(Qt5 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS
     Multimedia
 )
 
-find_package(KF5 REQUIRED COMPONENTS
-    Plasma
+find_package(KF6 ${KF6_MIN_VERSION} REQUIRED COMPONENTS
     I18n
-    Package
 )
 
-# 插件版本（.so 名用下划线，如 2_2_0；与 package/metadata.json 中 Version 保持一致）
-set(KABEGAME_WALLPAPER_VERSION "2.2.0" CACHE STRING "Kabegame wallpaper plugin version")
+find_package(Plasma REQUIRED)
 
-# 添加插件子目录
+set(KABEGAME_WALLPAPER_VERSION "2.2.14" CACHE STRING "Kabegame wallpaper plugin version")
+
 add_subdirectory(plugin)

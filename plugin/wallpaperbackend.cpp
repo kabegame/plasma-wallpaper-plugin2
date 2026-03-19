@@ -3,9 +3,9 @@
 #include "thumbnailprovider.h"
 
 #include <QCoreApplication>
-#include <QDebug>
 #include <QDir>
 #include <QFileInfo>
+#include <QUrl>
 
 WallpaperBackend::WallpaperBackend(QObject *parent)
     : QObject(parent)
@@ -116,14 +116,17 @@ void WallpaperBackend::setWallpaperByImageId(const QString &imageId)
     request.insert(QStringLiteral("cmd"), QStringLiteral("settings-set-current-wallpaper-image-id"));
     request.insert(QStringLiteral("image_id"), imageId);
 
-    m_ipc->sendRequest(request, [this](const QCborMap &response, const QString &error) {
+    const QString id = imageId.trimmed();
+    m_ipc->sendRequest(request, [this, id](const QCborMap &response, const QString &error) {
         if (!error.isEmpty()) {
             Q_EMIT hintMessage(QStringLiteral("设置壁纸请求失败: %1").arg(error));
             return;
         }
         if (!response.value(QStringLiteral("ok")).toBool()) {
             Q_EMIT hintMessage(QStringLiteral("设置壁纸失败: %1").arg(cborToString(response.value(QStringLiteral("message")))));
+            return;
         }
+        requestCurrentWallpaperPathByImageId(id);
     });
 }
 
@@ -197,6 +200,7 @@ void WallpaperBackend::requestInitialState()
     requestSettingValue(QStringLiteral("settings-get-wallpaper-video-playback-rate"));
     requestSettingValue(QStringLiteral("settings-get-wallpaper-rotation-interval-minutes"));
     requestSettingValue(QStringLiteral("settings-get-wallpaper-rotation-mode"));
+    requestSettingValue(QStringLiteral("settings-get-gallery-image-aspect-ratio"));
 
     QCborMap currentReq;
     currentReq.insert(QStringLiteral("cmd"), QStringLiteral("settings-get-current-wallpaper-image-id"));
@@ -224,10 +228,9 @@ void WallpaperBackend::requestCurrentWallpaperPathByImageId(const QString &image
         if (!error.isEmpty() || !response.value(QStringLiteral("ok")).toBool()) {
             return;
         }
-
         const QVariantMap dataMap = cborToVariantMap(response.value(QStringLiteral("data")));
-        const QString localPath = dataMap.value(QStringLiteral("localPath")).toString();
-        setCurrentWallpaper(localPath, true);
+        const QString path = dataMap.value(QStringLiteral("localPath")).toString();
+        setCurrentWallpaper(path, true);
     });
 }
 
@@ -341,6 +344,22 @@ void WallpaperBackend::applySettingChanges(const QVariantMap &changes)
             Q_EMIT wallpaperRotationModeChanged();
         }
     }
+
+    if (changes.contains(QStringLiteral("galleryImageAspectRatio"))) {
+        const QString ratio = changes.value(QStringLiteral("galleryImageAspectRatio")).toString();
+        if (!ratio.isEmpty() && m_galleryImageAspectRatio != ratio) {
+            m_galleryImageAspectRatio = ratio;
+            Q_EMIT galleryImageAspectRatioChanged();
+        }
+    }
+
+    if (changes.contains(QStringLiteral("currentWallpaperImageId"))) {
+        const QVariant idVar = changes.value(QStringLiteral("currentWallpaperImageId"));
+        const QString imageId = idVar.isNull() ? QString() : idVar.toString().trimmed();
+        if (!imageId.isEmpty()) {
+            requestCurrentWallpaperPathByImageId(imageId);
+        }
+    }
 }
 
 void WallpaperBackend::setCurrentWallpaper(const QString &path, bool requestQmlSwitch)
@@ -360,6 +379,14 @@ void WallpaperBackend::setCurrentWallpaper(const QString &path, bool requestQmlS
     if (requestQmlSwitch) {
         Q_EMIT wallpaperChangeRequested(path);
     }
+}
+
+QString WallpaperBackend::toFileUrl(const QString &path) const
+{
+    if (path.isEmpty()) {
+        return QString();
+    }
+    return QUrl::fromLocalFile(path).toString();
 }
 
 QString WallpaperBackend::cborToString(const QCborValue &value) const
