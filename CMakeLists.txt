@@ -30,6 +30,6 @@ find_package(KF6 ${KF6_MIN_VERSION} REQUIRED COMPONENTS
 
 find_package(Plasma REQUIRED)
 
-set(KABEGAME_WALLPAPER_VERSION "2.2.14" CACHE STRING "Kabegame wallpaper plugin version")
+set(KABEGAME_WALLPAPER_VERSION "2.2.16" CACHE STRING "Kabegame wallpaper plugin version")
 
 add_subdirectory(plugin)

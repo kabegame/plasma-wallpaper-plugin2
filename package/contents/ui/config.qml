@@ -76,7 +76,6 @@ ColumnLayout {
 
     Component.onCompleted: {
         backend.connectToKabegame()
-        backend.loadGalleryPage(1)
     }
 
     Kirigami.FormLayout {
@@ -106,29 +105,6 @@ ColumnLayout {
                 icon.name: "system-run"
                 onClicked: backend.openKabegame()
             }
-
-            Button {
-                text: i18n("从文件夹打开…")
-                icon.name: "document-open"
-                onClicked: openFileDialog.open()
-            }
-        }
-
-        FileDialog {
-            id: openFileDialog
-            title: i18n("选择壁纸图片")
-            nameFilters: [ i18n("Image files") + " (*.png *.jpg *.jpeg *.bmp *.gif *.webp)", i18n("All files") + " (*)" ]
-            fileMode: FileDialog.OpenFile
-            onAccepted: {
-                var path = openFileDialog.selectedFile.toString()
-                if (path.indexOf("file://") === 0) {
-                    path = path.replace("file://", "")
-                }
-                if (path.length > 0) {
-                    root.writeWallpaperConfigImage(path)
-                    backend.syncImageConfig(path)
-                }
-            }
         }
 
         Label {
@@ -149,6 +125,87 @@ ColumnLayout {
         ColumnLayout {
             anchors.fill: parent
             spacing: Kirigami.Units.smallSpacing
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+
+                Button {
+                    id: filterButton
+                    text: backend.filterDisplayText
+                    icon.name: "view-filter"
+                    display: Button.TextBesideIcon
+
+                    Menu {
+                        id: filterMenu
+                        width: Math.max(filterButton.width, Kirigami.Units.gridUnit * 12)
+
+                        MenuItem {
+                            text: i18n("All")
+                            onTriggered: backend.setProviderRootPath("all")
+                        }
+
+                        MenuSeparator { }
+
+                        Menu {
+                            title: i18n("Albums")
+                            width: Kirigami.Units.gridUnit * 12
+
+                            Repeater {
+                                model: backend.albumList
+                                MenuItem {
+                                    text: modelData.name || modelData.id
+                                    onTriggered: backend.setProviderRootPath("album/" + modelData.id)
+                                }
+                            }
+                        }
+
+                        Menu {
+                            title: i18n("Tasks")
+                            width: Kirigami.Units.gridUnit * 14
+
+                            Repeater {
+                                model: backend.taskList
+                                MenuItem {
+                                    text: (modelData.displayTime && modelData.displayTime.length > 0)
+                                        ? (modelData.pluginId + " " + modelData.displayTime)
+                                        : modelData.pluginId
+                                    onTriggered: backend.setProviderRootPath("task/" + modelData.id)
+                                }
+                            }
+                        }
+                    }
+
+                    onClicked: filterMenu.popup(filterButton, 0, filterButton.height)
+                }
+
+                Button {
+                    id: sortButton
+                    text: backend.sortDescending ? i18n("Time: Desc") : i18n("Time: Asc")
+                    icon.name: "view-sort-ascending"
+                    display: Button.TextBesideIcon
+
+                    Menu {
+                        id: sortMenu
+                        width: Math.max(sortButton.width, Kirigami.Units.gridUnit * 10)
+
+                        MenuItem {
+                            text: i18n("Time: Asc")
+                            onTriggered: backend.setSortDescending(false)
+                        }
+                        MenuItem {
+                            text: i18n("Time: Desc")
+                            onTriggered: backend.setSortDescending(true)
+                        }
+                    }
+
+                    onClicked: sortMenu.popup(sortButton, 0, sortButton.height)
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+            }
 
             KCM.GridView {
                 id: galleryGrid
@@ -174,6 +231,23 @@ ColumnLayout {
                     opacity: galleryGrid.view.currentIndex === index ? 1 : 0.96
 
                     text: modelData.localPath ? modelData.localPath.split("/").pop() : modelData.id
+
+                    actions: [
+                        Kirigami.Action {
+                            icon.name: "document-open-folder"
+                            tooltip: i18n("Open Containing Folder")
+                            visible: !!modelData.localPath
+                            onTriggered: {
+                                var path = (modelData.localPath || "").toString()
+                                var idx = path.lastIndexOf("/")
+                                var dir = (idx > 0) ? path.substring(0, idx) : path
+                                if (dir.length > 0) {
+                                    var url = (dir.indexOf("file://") === 0) ? dir : ("file://" + dir)
+                                    Qt.openUrlExternally(url)
+                                }
+                            }
+                        }
+                    ]
 
                     thumbnail: Rectangle {
                         anchors.fill: parent

@@ -1,11 +1,14 @@
 import QtQuick
 import QtMultimedia
+import org.kde.plasma.plasmoid
 import org.kabegame.wallpaper 1.0
 
-Item {
+WallpaperItem {
     id: root
+    anchors.fill: parent
 
-    readonly property var cfg: (typeof wallpaper !== "undefined" && wallpaper && wallpaper.configuration) ? wallpaper.configuration : null
+    // Plasma 6: configuration 由 WallpaperItem 提供；不再依赖全局 wallpaper
+    readonly property var cfg: root.configuration
     readonly property string configPath: cfg ? (cfg.Image || "") : ""
 
     property bool isTransitioning: false
@@ -121,6 +124,16 @@ Item {
         }
     }
 
+    // 显式在速率变更时设置播放器 playbackRate（绑定有时在 MediaPlayer 上不会实时生效）
+    Connections {
+        target: backend
+        function onWallpaperVideoPlaybackRateChanged() {
+            var rate = Math.max(backend.wallpaperVideoPlaybackRate, 0.01)
+            playerA.playbackRate = rate
+            playerB.playbackRate = rate
+        }
+    }
+
     onConfigPathChanged: switchWallpaper(configPath)
 
     Item {
@@ -175,7 +188,10 @@ Item {
                 loops: MediaPlayer.Infinite
                 playbackRate: Math.max(backend.wallpaperVideoPlaybackRate, 0.01)
                 onSourceChanged: {
-                    if (source.toString().length > 0) play()
+                    if (source.toString().length > 0) {
+                        playbackRate = Math.max(backend.wallpaperVideoPlaybackRate, 0.01)
+                        play()
+                    }
                 }
             }
         }
@@ -228,7 +244,10 @@ Item {
                 loops: MediaPlayer.Infinite
                 playbackRate: Math.max(backend.wallpaperVideoPlaybackRate, 0.01)
                 onSourceChanged: {
-                    if (source.toString().length > 0) play()
+                    if (source.toString().length > 0) {
+                        playbackRate = Math.max(backend.wallpaperVideoPlaybackRate, 0.01)
+                        play()
+                    }
                 }
             }
         }

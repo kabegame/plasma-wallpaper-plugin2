@@ -3,6 +3,7 @@
 #include "thumbnailprovider.h"
 
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
 #include <QUrl>
@@ -50,11 +51,20 @@ void WallpaperBackend::loadGalleryPage(int page)
         page = 1;
     }
 
+    QString path;
+    if (m_providerRootPath == QLatin1String("all")) {
+        path = m_sortDescending ? QStringLiteral("all/desc/%1").arg(page) : QStringLiteral("all/%1").arg(page);
+    } else {
+        path = QStringLiteral("%1/%2").arg(m_providerRootPath, QString::number(page));
+    }
+
+    const QString pathForCallback = path;
+
     QCborMap request;
     request.insert(QStringLiteral("cmd"), QStringLiteral("gallery-browse-provider"));
-    request.insert(QStringLiteral("path"), QStringLiteral("all/%1").arg(page));
+    request.insert(QStringLiteral("path"), path);
 
-    m_ipc->sendRequest(request, [this, page](const QCborMap &response, const QString &error) {
+    m_ipc->sendRequest(request, [this, page, pathForCallback](const QCborMap &response, const QString &error) {
         if (!error.isEmpty()) {
             Q_EMIT hintMessage(QStringLiteral("加载画廊失败: %1").arg(error));
             return;
@@ -67,6 +77,11 @@ void WallpaperBackend::loadGalleryPage(int page)
         const QVariantMap dataMap = cborToVariantMap(response.value(QStringLiteral("data")));
         const QVariantList entries = dataMap.value(QStringLiteral("entries")).toList();
         const int total = dataMap.value(QStringLiteral("total")).toInt();
+
+        if (total == 0 && !pathForCallback.startsWith(QLatin1String("all"))) {
+            setProviderRootPath(QStringLiteral("all"));
+            return;
+        }
 
         QVariantList images;
         for (const QVariant &entryVar : entries) {
@@ -104,6 +119,133 @@ void WallpaperBackend::loadGalleryPage(int page)
         Q_EMIT galleryTotalChanged();
         Q_EMIT galleryPageChanged();
     });
+}
+
+void WallpaperBackend::loadAlbums()
+{
+    QCborMap request;
+    request.insert(QStringLiteral("cmd"), QStringLiteral("storage-get-albums"));
+
+    m_ipc->sendRequest(request, [this](const QCborMap &response, const QString &error) {
+        if (!error.isEmpty() || !response.value(QStringLiteral("ok")).toBool()) {
+            return;
+        }
+
+        const QVariant dataVar = response.value(QStringLiteral("data")).toVariant();
+        const QVariantList raw = dataVar.toList();
+        QVariantList albums;
+        for (const QVariant &v : raw) {
+            const QVariantMap m = v.toMap();
+            QVariantMap item;
+            item.insert(QStringLiteral("id"), m.value(QStringLiteral("id")).toString());
+            item.insert(QStringLiteral("name"), m.value(QStringLiteral("name")).toString());
+            item.insert(QStringLiteral("createdAt"), m.value(QStringLiteral("createdAt")).toLongLong());
+            albums.append(item);
+        }
+
+        m_albumList = albums;
+        Q_EMIT albumListChanged();
+    });
+}
+
+void WallpaperBackend::loadTasks()
+{
+    QCborMap request;
+    request.insert(QStringLiteral("cmd"), QStringLiteral("storage-get-all-tasks"));
+
+    m_ipc->sendRequest(request, [this](const QCborMap &response, const QString &error) {
+        if (!error.isEmpty() || !response.value(QStringLiteral("ok")).toBool()) {
+            return;
+        }
+
+        const QVariant dataVar = response.value(QStringLiteral("data")).toVariant();
+        const QVariantList raw = dataVar.toList();
+        QVariantList tasks;
+        for (const QVariant &v : raw) {
+            const QVariantMap m = v.toMap();
+            const qint64 startTime = m.value(QStringLiteral("startTime")).toLongLong();
+            QString displayTime;
+            if (startTime > 0) {
+                displayTime = QDateTime::fromSecsSinceEpoch(startTime).toString(Qt::ISODate);
+            }
+
+            QVariantMap item;
+            item.insert(QStringLiteral("id"), m.value(QStringLiteral("id")).toString());
+            item.insert(QStringLiteral("pluginId"), m.value(QStringLiteral("pluginId")).toString());
+            item.insert(QStringLiteral("startTime"), startTime);
+            item.insert(QStringLiteral("displayTime"), displayTime);
+            tasks.append(item);
+        }
+
+        m_taskList = tasks;
+        Q_EMIT taskListChanged();
+    });
+}
+
+void WallpaperBackend::setProviderRootPath(const QString &path)
+{
+    if (m_providerRootPath == path) {
+        return;
+    }
+
+    m_providerRootPath = path;
+    updateFilterDisplayText();
+    Q_EMIT providerRootPathChanged();
+    Q_EMIT filterDisplayTextChanged();
+    loadGalleryPage(1);
+}
+
+void WallpaperBackend::setSortDescending(bool desc)
+{
+    if (m_sortDescending == desc) {
+        return;
+    }
+
+    m_sortDescending = desc;
+    Q_EMIT sortDescendingChanged();
+    if (m_providerRootPath == QLatin1String("all")) {
+        loadGalleryPage(1);
+    }
+}
+
+void WallpaperBackend::updateFilterDisplayText()
+{
+    if (m_providerRootPath == QLatin1String("all")) {
+        m_filterDisplayText = QStringLiteral("All");
+        return;
+    }
+
+    if (m_providerRootPath.startsWith(QLatin1String("album/"))) {
+        const QString id = m_providerRootPath.mid(6);
+        for (const QVariant &v : m_albumList) {
+            const QVariantMap m = v.toMap();
+            if (m.value(QStringLiteral("id")).toString() == id) {
+                m_filterDisplayText = QStringLiteral("Album: %1").arg(m.value(QStringLiteral("name")).toString());
+                return;
+            }
+        }
+        m_filterDisplayText = QStringLiteral("Album: ?");
+        return;
+    }
+
+    if (m_providerRootPath.startsWith(QLatin1String("task/"))) {
+        const QString id = m_providerRootPath.mid(5);
+        for (const QVariant &v : m_taskList) {
+            const QVariantMap m = v.toMap();
+            if (m.value(QStringLiteral("id")).toString() == id) {
+                const QString pluginId = m.value(QStringLiteral("pluginId")).toString();
+                const QString displayTime = m.value(QStringLiteral("displayTime")).toString();
+                m_filterDisplayText = displayTime.isEmpty()
+                    ? QStringLiteral("Task: %1").arg(pluginId)
+                    : QStringLiteral("Task: %1 %2").arg(pluginId, displayTime);
+                return;
+            }
+        }
+        m_filterDisplayText = QStringLiteral("Task: ?");
+        return;
+    }
+
+    m_filterDisplayText = m_providerRootPath;
 }
 
 void WallpaperBackend::setWallpaperByImageId(const QString &imageId)
@@ -159,6 +301,7 @@ void WallpaperBackend::onIpcConnectedChanged(bool connected)
     kinds.append(QStringLiteral("album-added"));
     kinds.append(QStringLiteral("album-name-changed"));
     kinds.append(QStringLiteral("album-deleted"));
+    kinds.append(QStringLiteral("task-status"));
     m_ipc->subscribeEvents(kinds);
 
     requestInitialState();
@@ -178,10 +321,44 @@ void WallpaperBackend::onIpcEventReceived(const QString &eventType, const QCborM
         return;
     }
 
-    if (eventType == QLatin1String("images-change")
-        || eventType == QLatin1String("album-added")
-        || eventType == QLatin1String("album-name-changed")
-        || eventType == QLatin1String("album-deleted")) {
+    if (eventType == QLatin1String("album-added")) {
+        loadAlbums();
+        loadGalleryPage(m_galleryPage);
+        return;
+    }
+
+    if (eventType == QLatin1String("album-deleted")) {
+        const QVariantMap root = cborToVariantMap(QCborValue(payload));
+        const QString albumId = root.value(QStringLiteral("albumId")).toString();
+        loadAlbums();
+        if (m_providerRootPath == QStringLiteral("album/%1").arg(albumId)) {
+            setProviderRootPath(QStringLiteral("all"));
+        } else {
+            loadGalleryPage(m_galleryPage);
+        }
+        return;
+    }
+
+    if (eventType == QLatin1String("album-name-changed")) {
+        const QVariantMap root = cborToVariantMap(QCborValue(payload));
+        const QString albumId = root.value(QStringLiteral("albumId")).toString();
+        const QString newName = root.value(QStringLiteral("newName")).toString();
+        loadAlbums();
+        if (m_providerRootPath == QStringLiteral("album/%1").arg(albumId)) {
+            m_filterDisplayText = QStringLiteral("Album: %1").arg(newName);
+            Q_EMIT filterDisplayTextChanged();
+        }
+        loadGalleryPage(m_galleryPage);
+        return;
+    }
+
+    if (eventType == QLatin1String("task-status")) {
+        loadTasks();
+        loadGalleryPage(m_galleryPage);
+        return;
+    }
+
+    if (eventType == QLatin1String("images-change")) {
         loadGalleryPage(m_galleryPage);
         return;
     }
@@ -215,6 +392,8 @@ void WallpaperBackend::requestInitialState()
         }
     });
 
+    loadAlbums();
+    loadTasks();
     loadGalleryPage(1);
 }
 

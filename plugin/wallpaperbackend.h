@@ -25,6 +25,11 @@ class WallpaperBackend : public QObject
     Q_PROPERTY(int galleryTotal READ galleryTotal NOTIFY galleryTotalChanged)
     Q_PROPERTY(int galleryPage READ galleryPage NOTIFY galleryPageChanged)
     Q_PROPERTY(int galleryPageSize READ galleryPageSize CONSTANT)
+    Q_PROPERTY(QVariantList albumList READ albumList NOTIFY albumListChanged)
+    Q_PROPERTY(QVariantList taskList READ taskList NOTIFY taskListChanged)
+    Q_PROPERTY(QString providerRootPath READ providerRootPath NOTIFY providerRootPathChanged)
+    Q_PROPERTY(bool sortDescending READ sortDescending NOTIFY sortDescendingChanged)
+    Q_PROPERTY(QString filterDisplayText READ filterDisplayText NOTIFY filterDisplayTextChanged)
 
 public:
     explicit WallpaperBackend(QObject *parent = nullptr);
@@ -43,10 +48,19 @@ public:
     int galleryTotal() const { return m_galleryTotal; }
     int galleryPage() const { return m_galleryPage; }
     int galleryPageSize() const { return m_galleryPageSize; }
+    QVariantList albumList() const { return m_albumList; }
+    QVariantList taskList() const { return m_taskList; }
+    QString providerRootPath() const { return m_providerRootPath; }
+    bool sortDescending() const { return m_sortDescending; }
+    QString filterDisplayText() const { return m_filterDisplayText; }
 
     Q_INVOKABLE void connectToKabegame();
     Q_INVOKABLE void openKabegame();
     Q_INVOKABLE void loadGalleryPage(int page);
+    Q_INVOKABLE void loadAlbums();
+    Q_INVOKABLE void loadTasks();
+    Q_INVOKABLE void setProviderRootPath(const QString &path);
+    Q_INVOKABLE void setSortDescending(bool desc);
     Q_INVOKABLE void setWallpaperByImageId(const QString &imageId);
     /// 将本地路径转为带编码的 file:// URL，供 QML Image/Video 正确加载含中文等字符的路径
     Q_INVOKABLE QString toFileUrl(const QString &path) const;
@@ -67,6 +81,11 @@ Q_SIGNALS:
     void galleryImagesChanged();
     void galleryTotalChanged();
     void galleryPageChanged();
+    void albumListChanged();
+    void taskListChanged();
+    void providerRootPathChanged();
+    void sortDescendingChanged();
+    void filterDisplayTextChanged();
 
     void wallpaperChangeRequested(const QString &newWallpaper);
     void imageConfigSyncRequested(const QString &path);
@@ -82,6 +101,7 @@ private:
     void requestSettingValue(const QString &cmd);
     void applySettingChanges(const QVariantMap &changes);
     void setCurrentWallpaper(const QString &path, bool requestQmlSwitch);
+    void updateFilterDisplayText();
     QString cborToString(const QCborValue &value) const;
     QVariantMap cborToVariantMap(const QCborValue &value) const;
 
@@ -101,6 +121,12 @@ private:
     int m_galleryTotal = 0;
     int m_galleryPage = 1;
     const int m_galleryPageSize = 100;
+
+    QVariantList m_albumList;
+    QVariantList m_taskList;
+    QString m_providerRootPath = QStringLiteral("all");
+    bool m_sortDescending = false;
+    QString m_filterDisplayText = QStringLiteral("All");
 };
 
 #endif // WALLPAPERBACKEND_H
