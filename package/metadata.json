@@ -18,7 +18,7 @@
         "Name[ja]": "Kabegame 壁紙",
         "Name[ko]": "Kabegame 배경화면",
         "Name[zh_CN]": "Kabegame 壁纸",
-        "Version": "0.1.0",
+        "Version": "0.1.1",
         "Website": "https://github.com/kabegame/kabegame"
     },
     "X-KDE-ParentApp": "org.kde.plasmashell",

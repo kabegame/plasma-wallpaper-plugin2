@@ -3,7 +3,7 @@ name: Release Plasma Wallpaper Plugin
 on:
   push:
     tags:
-      - "plasma-v*"
+      - "v*"
 
 permissions:
   contents: write
