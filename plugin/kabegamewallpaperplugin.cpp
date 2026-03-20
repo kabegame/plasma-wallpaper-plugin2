@@ -22,14 +22,15 @@ public:
         
         // 注册 WallpaperBackend 类型
         qmlRegisterType<WallpaperBackend>(uri, 1, 0, "WallpaperBackend");
-        
+
         qDebug() << "[Kabegame] 插件已注册: org.kabegame.wallpaper";
     }
 
     void initializeEngine(QQmlEngine *engine, const char *uri) override
     {
         Q_UNUSED(uri)
-        engine->addImageProvider(QStringLiteral("kabegame"), ThumbnailProvider::instance());
+        auto *provider = new ThumbnailProvider();
+        engine->addImageProvider(QStringLiteral("kabegame"), provider);
     }
 };
 

@@ -40,7 +40,7 @@ dpkg-buildpackage -us -uc -b
 # 6. Move artifacts from parent into dist/ so monorepo parent stays clean
 for f in ../kabegame-plasma-wallpaper_*; do
     if [ -e "$f" ]; then
-        mv "$f" "$DIST_DIR/"
+        mv -f "$f" "$DIST_DIR/"
     fi
 done
 

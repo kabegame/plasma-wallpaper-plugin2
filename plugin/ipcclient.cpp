@@ -40,6 +40,17 @@ IpcClient::IpcClient(QObject *parent)
     connect(m_reconnectTimer, &QTimer::timeout, this, &IpcClient::onReconnectTimer);
 }
 
+IpcClient::~IpcClient()
+{
+    m_shouldReconnect = false;
+    m_heartbeatTimer->stop();
+    m_reconnectTimer->stop();
+    if (m_socket->state() != QLocalSocket::UnconnectedState) {
+        m_socket->disconnectFromServer();
+    }
+    m_pendingHandlers.clear();
+}
+
 bool IpcClient::isConnected() const
 {
     return m_socket->state() == QLocalSocket::ConnectedState;

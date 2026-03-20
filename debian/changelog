@@ -1,3 +1,15 @@
+kabegame-plasma-wallpaper (0.1.2) unstable; urgency=medium
+
+  * Fix config panel crash on second open: ThumbnailProvider was a static
+    singleton given to QQmlEngine via addImageProvider(), so the engine took
+    ownership and deleted it when the first config closed, leaving a dangling
+    pointer. Second open then triggered use-after-free when loading gallery
+    thumbnails. Fix: move thumbnail path storage to ThumbnailPathStore, create
+    a new ThumbnailProvider per engine in initializeEngine() so each engine
+    owns its provider and no use-after-free occurs.
+
+ -- Cmtheit <cmtheit@outlook.com>  Fri, 20 Mar 2025 12:00:00 +0800
+
 kabegame-plasma-wallpaper (0.1.1) unstable; urgency=medium
 
   * Initial debian package.

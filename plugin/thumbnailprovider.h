@@ -6,6 +6,20 @@
 #include <QMutex>
 #include <QQuickImageProvider>
 
+class ThumbnailPathStore
+{
+public:
+    static ThumbnailPathStore &global();
+
+    QString path(const QString &imageId) const;
+    void insert(const QString &imageId, const QString &thumbnailPath);
+    void clear();
+
+private:
+    mutable QMutex m_mutex;
+    QHash<QString, QString> m_paths;
+};
+
 class ThumbnailProvider : public QQuickImageProvider
 {
 public:
@@ -18,13 +32,8 @@ public:
         const QSize &requestedSize
     ) override;
 
-    static ThumbnailProvider *instance();
     static void setThumbnailPath(const QString &imageId, const QString &thumbnailPath);
-    static void clear();
-
-private:
-    QHash<QString, QString> m_thumbPaths;
-    QMutex m_mutex;
+    static void clearPaths();
 };
 
 #endif // THUMBNAILPROVIDER_H

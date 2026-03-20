@@ -7,6 +7,7 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
+#include <QTimer>
 #include <QUrl>
 
 WallpaperBackend::WallpaperBackend(QObject *parent)
@@ -16,7 +17,16 @@ WallpaperBackend::WallpaperBackend(QObject *parent)
     connect(m_ipc, &IpcClient::connectedChanged, this, &WallpaperBackend::onIpcConnectedChanged);
     connect(m_ipc, &IpcClient::eventReceived, this, &WallpaperBackend::onIpcEventReceived);
 
-    connectToKabegame();
+    // 延迟到下一事件循环再连接，避免在 QML 根/布局未完成时触发订阅与 requestInitialState，减少第二次打开配置时的卡死
+    QTimer::singleShot(0, this, &WallpaperBackend::connectToKabegame);
+}
+
+WallpaperBackend::~WallpaperBackend()
+{
+    m_alive = false;
+    if (m_ipc) {
+        m_ipc->disconnectFromDaemon();
+    }
 }
 
 void WallpaperBackend::connectToKabegame()
@@ -24,11 +34,19 @@ void WallpaperBackend::connectToKabegame()
     m_ipc->connectToDaemon();
 }
 
+void WallpaperBackend::disconnectFromKabegame()
+{
+    if (m_ipc) {
+        m_ipc->disconnectFromDaemon();
+    }
+}
+
 void WallpaperBackend::openKabegame()
 {
     QCborMap request;
     request.insert(QStringLiteral("cmd"), QStringLiteral("app-show-window"));
     m_ipc->sendRequest(request, [this](const QCborMap &response, const QString &error) {
+        if (!m_alive) return;
         if (!error.isEmpty()) {
             const bool started = QProcess::startDetached(QStringLiteral("kabegame"), QStringList());
             if (!started) {
@@ -66,6 +84,7 @@ void WallpaperBackend::loadGalleryPage(int page)
     request.insert(QStringLiteral("path"), path);
 
     m_ipc->sendRequest(request, [this, page, pathForCallback](const QCborMap &response, const QString &error) {
+        if (!m_alive) return;
         if (!error.isEmpty()) {
             Q_EMIT hintMessage(i18n("Failed to load gallery: %1", error));
             return;
@@ -128,6 +147,7 @@ void WallpaperBackend::loadAlbums()
     request.insert(QStringLiteral("cmd"), QStringLiteral("storage-get-albums"));
 
     m_ipc->sendRequest(request, [this](const QCborMap &response, const QString &error) {
+        if (!m_alive) return;
         if (!error.isEmpty() || !response.value(QStringLiteral("ok")).toBool()) {
             return;
         }
@@ -155,6 +175,7 @@ void WallpaperBackend::loadTasks()
     request.insert(QStringLiteral("cmd"), QStringLiteral("storage-get-all-tasks"));
 
     m_ipc->sendRequest(request, [this](const QCborMap &response, const QString &error) {
+        if (!m_alive) return;
         if (!error.isEmpty() || !response.value(QStringLiteral("ok")).toBool()) {
             return;
         }
@@ -261,6 +282,7 @@ void WallpaperBackend::setWallpaperByImageId(const QString &imageId)
 
     const QString id = imageId.trimmed();
     m_ipc->sendRequest(request, [this, id](const QCborMap &response, const QString &error) {
+        if (!m_alive) return;
         if (!error.isEmpty()) {
             Q_EMIT hintMessage(i18n("Failed to set wallpaper: %1", error));
             return;
@@ -383,6 +405,7 @@ void WallpaperBackend::requestInitialState()
     QCborMap currentReq;
     currentReq.insert(QStringLiteral("cmd"), QStringLiteral("settings-get-current-wallpaper-image-id"));
     m_ipc->sendRequest(currentReq, [this](const QCborMap &response, const QString &error) {
+        if (!m_alive) return;
         if (!error.isEmpty() || !response.value(QStringLiteral("ok")).toBool()) {
             return;
         }
@@ -405,6 +428,7 @@ void WallpaperBackend::requestCurrentWallpaperPathByImageId(const QString &image
     imageReq.insert(QStringLiteral("image_id"), imageId);
 
     m_ipc->sendRequest(imageReq, [this](const QCborMap &response, const QString &error) {
+        if (!m_alive) return;
         if (!error.isEmpty() || !response.value(QStringLiteral("ok")).toBool()) {
             return;
         }
@@ -420,6 +444,7 @@ void WallpaperBackend::requestSettingValue(const QString &cmd)
     req.insert(QStringLiteral("cmd"), cmd);
 
     m_ipc->sendRequest(req, [this, cmd](const QCborMap &response, const QString &error) {
+        if (!m_alive) return;
         if (!error.isEmpty() || !response.value(QStringLiteral("ok")).toBool()) {
             return;
         }

@@ -22,7 +22,7 @@ for po in "$DIR"/*.po; do
     msgfmt -o "${DIR}/${locale}.mo" "$po" || { echo "[build] msgfmt failed for $po"; exit 1; }
     install_path="${LOCALE_ROOT}/${locale}/LC_MESSAGES/${DOMAIN}.mo"
     mkdir -p "$(dirname "$install_path")"
-    mv "${DIR}/${locale}.mo" "$install_path"
+    mv -f "${DIR}/${locale}.mo" "$install_path"
 done
 
 echo "[build] Done. .mo files installed under contents/locale/<lang>/LC_MESSAGES/"

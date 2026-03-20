@@ -33,7 +33,7 @@ class WallpaperBackend : public QObject
 
 public:
     explicit WallpaperBackend(QObject *parent = nullptr);
-    ~WallpaperBackend() override = default;
+    ~WallpaperBackend() override;
 
     bool connected() const { return m_connected; }
     QString currentWallpaper() const { return m_currentWallpaper; }
@@ -55,6 +55,7 @@ public:
     QString filterDisplayText() const { return m_filterDisplayText; }
 
     Q_INVOKABLE void connectToKabegame();
+    Q_INVOKABLE void disconnectFromKabegame();
     Q_INVOKABLE void openKabegame();
     Q_INVOKABLE void loadGalleryPage(int page);
     Q_INVOKABLE void loadAlbums();
@@ -106,6 +107,7 @@ private:
     QVariantMap cborToVariantMap(const QCborValue &value) const;
 
     IpcClient *m_ipc = nullptr;
+    bool m_alive = true;
 
     bool m_connected = false;
     QString m_currentWallpaper;

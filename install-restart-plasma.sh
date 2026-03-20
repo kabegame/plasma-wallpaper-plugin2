@@ -1,1 +1,1 @@
-./install.sh && kquitapp5 plasmashell && kstart5 plasmashell
+./install.sh && kquitapp6 plasmashell && kstart plasmashell

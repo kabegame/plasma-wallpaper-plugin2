@@ -17,7 +17,7 @@ public:
     using ReplyHandler = std::function<void(const QCborMap &, const QString &)>;
 
     explicit IpcClient(QObject *parent = nullptr);
-    ~IpcClient() override = default;
+    ~IpcClient() override;
 
     bool isConnected() const;
     QString socketPath() const { return m_socketPath; }
