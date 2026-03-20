@@ -1,0 +1,67 @@
+# Translation of Kabegame Wallpaper plugin in Japanese
+# Copyright (C) 2024 Kabegame Team
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: org.kabegame.wallpaper\n"
+"Report-Msgid-Bugs-To: https://github.com/kabegame/kabegame\n"
+"POT-Creation-Date: 2024-01-01 00:00+0000\n"
+"PO-Revision-Date: 2024-01-01 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Japanese\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Kabegame:"
+msgstr "Kabegame:"
+
+msgid "Connected"
+msgstr "接続済み"
+
+msgid "Disconnected"
+msgstr "未接続"
+
+msgid "Open Kabegame"
+msgstr "Kabegame を開く"
+
+msgid "All"
+msgstr "すべて"
+
+msgid "Albums"
+msgstr "アルバム"
+
+msgid "Tasks"
+msgstr "タスク"
+
+msgid "Time: Asc"
+msgstr "時刻: 昇順"
+
+msgid "Time: Desc"
+msgstr "時刻: 降順"
+
+msgid "Open Containing Folder"
+msgstr "フォルダを開く"
+
+msgid "Page %1 · 100 per page · %2 total"
+msgstr "ページ %1 · 1ページ100件 · 合計 %2件"
+
+msgid "Previous"
+msgstr "前へ"
+
+msgid "Next"
+msgstr "次へ"
+
+msgid "Cannot connect to Kabegame, and failed to start the application."
+msgstr "Kabegame に接続できず、アプリの起動にも失敗しました。"
+
+msgid "Failed to bring window to front, and failed to start Kabegame."
+msgstr "ウィンドウを前面にできず、Kabegame の起動にも失敗しました。"
+
+msgid "Failed to load gallery: %1"
+msgstr "ギャラリーの読み込みに失敗しました: %1"
+
+msgid "Failed to set wallpaper: %1"
+msgstr "壁紙の設定に失敗しました: %1"

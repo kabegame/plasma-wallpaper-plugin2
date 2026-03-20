@@ -1,0 +1,67 @@
+# Translation of Kabegame Wallpaper plugin in Simplified Chinese
+# Copyright (C) 2024 Kabegame Team
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: org.kabegame.wallpaper\n"
+"Report-Msgid-Bugs-To: https://github.com/kabegame/kabegame\n"
+"POT-Creation-Date: 2024-01-01 00:00+0000\n"
+"PO-Revision-Date: 2024-01-01 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Simplified Chinese\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Kabegame:"
+msgstr "Kabegame："
+
+msgid "Connected"
+msgstr "已连接"
+
+msgid "Disconnected"
+msgstr "未连接"
+
+msgid "Open Kabegame"
+msgstr "打开 Kabegame"
+
+msgid "All"
+msgstr "全部"
+
+msgid "Albums"
+msgstr "画册"
+
+msgid "Tasks"
+msgstr "任务"
+
+msgid "Time: Asc"
+msgstr "时间：升序"
+
+msgid "Time: Desc"
+msgstr "时间：降序"
+
+msgid "Open Containing Folder"
+msgstr "打开所在文件夹"
+
+msgid "Page %1 · 100 per page · %2 total"
+msgstr "第 %1 页 · 本页 100 张 · 共 %2 张"
+
+msgid "Previous"
+msgstr "上一页"
+
+msgid "Next"
+msgstr "下一页"
+
+msgid "Cannot connect to Kabegame, and failed to start the application."
+msgstr "无法连接 Kabegame，也无法启动程序。"
+
+msgid "Failed to bring window to front, and failed to start Kabegame."
+msgstr "请求前台失败，且启动 Kabegame 失败。"
+
+msgid "Failed to load gallery: %1"
+msgstr "加载画廊失败: %1"
+
+msgid "Failed to set wallpaper: %1"
+msgstr "设置壁纸失败: %1"

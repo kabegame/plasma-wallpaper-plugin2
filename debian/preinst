@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+# Remove all old plugin .so versions before unpacking the new one (avoid leftover libplasma_wallpaper_kabegame_*_*.so)
+case "$1" in
+    upgrade|install)
+        PLUGIN_DIR="/usr/lib/$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || echo x86_64-linux-gnu)/qt6/qml/org/kabegame/wallpaper"
+        if [ -d "$PLUGIN_DIR" ]; then
+            rm -f "$PLUGIN_DIR"/libplasma_wallpaper_kabegame_*.so
+        fi
+        ;;
+esac
+
+exit 0

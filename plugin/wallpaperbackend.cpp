@@ -2,6 +2,7 @@
 
 #include "thumbnailprovider.h"
 
+#include <KLocalizedString>
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
@@ -31,7 +32,7 @@ void WallpaperBackend::openKabegame()
         if (!error.isEmpty()) {
             const bool started = QProcess::startDetached(QStringLiteral("kabegame"), QStringList());
             if (!started) {
-                Q_EMIT hintMessage(QStringLiteral("无法连接 Kabegame，也无法启动程序"));
+                Q_EMIT hintMessage(i18n("Cannot connect to Kabegame, and failed to start the application."));
             }
             return;
         }
@@ -39,7 +40,7 @@ void WallpaperBackend::openKabegame()
         if (!response.value(QStringLiteral("ok")).toBool()) {
             const bool started = QProcess::startDetached(QStringLiteral("kabegame"), QStringList());
             if (!started) {
-                Q_EMIT hintMessage(QStringLiteral("请求前台失败，且启动 Kabegame 失败"));
+                Q_EMIT hintMessage(i18n("Failed to bring window to front, and failed to start Kabegame."));
             }
         }
     });
@@ -66,11 +67,11 @@ void WallpaperBackend::loadGalleryPage(int page)
 
     m_ipc->sendRequest(request, [this, page, pathForCallback](const QCborMap &response, const QString &error) {
         if (!error.isEmpty()) {
-            Q_EMIT hintMessage(QStringLiteral("加载画廊失败: %1").arg(error));
+            Q_EMIT hintMessage(i18n("Failed to load gallery: %1", error));
             return;
         }
         if (!response.value(QStringLiteral("ok")).toBool()) {
-            Q_EMIT hintMessage(QStringLiteral("加载画廊失败: %1").arg(cborToString(response.value(QStringLiteral("message")))));
+            Q_EMIT hintMessage(i18n("Failed to load gallery: %1", cborToString(response.value(QStringLiteral("message")))));
             return;
         }
 
@@ -261,11 +262,11 @@ void WallpaperBackend::setWallpaperByImageId(const QString &imageId)
     const QString id = imageId.trimmed();
     m_ipc->sendRequest(request, [this, id](const QCborMap &response, const QString &error) {
         if (!error.isEmpty()) {
-            Q_EMIT hintMessage(QStringLiteral("设置壁纸请求失败: %1").arg(error));
+            Q_EMIT hintMessage(i18n("Failed to set wallpaper: %1", error));
             return;
         }
         if (!response.value(QStringLiteral("ok")).toBool()) {
-            Q_EMIT hintMessage(QStringLiteral("设置壁纸失败: %1").arg(cborToString(response.value(QStringLiteral("message")))));
+            Q_EMIT hintMessage(i18n("Failed to set wallpaper: %1", cborToString(response.value(QStringLiteral("message")))));
             return;
         }
         requestCurrentWallpaperPathByImageId(id);

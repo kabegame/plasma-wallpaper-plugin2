@@ -4,6 +4,17 @@
 *.tar.gz
 *.zip
 
+# dpkg-buildpackage output (moved here by build-deb.sh)
+/dist/
+
+# deb build products (keep only control, rules, changelog, postinst, source/format)
+/debian/files
+/debian/debhelper-build-stamp
+/debian/.debhelper/
+/debian/*.substvars
+/debian/*.debhelper.log
+/debian/kabegame-plasma-wallpaper/
+
 # 临时文件
 *.tmp
 *.bak
@@ -26,3 +37,5 @@ Thumbs.db
 /build/
 
 example/
+
+package/contents/locale/

@@ -1,0 +1,32 @@
+Source: kabegame-plasma-wallpaper
+Section: kde
+Priority: optional
+Maintainer: Cmtheit <cmtheit@outlook.com>
+Build-Depends: cmake,
+               debhelper-compat (= 13),
+               extra-cmake-modules,
+               gettext,
+               libkf6i18n-dev,
+               libkf6package-dev,
+               plasma-workspace-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/kabegame/plasma-wallpaper-plugin2
+Rules-Requires-Root: no
+
+Package: kabegame-plasma-wallpaper
+Architecture: amd64
+Depends: kabegame,
+         libkf6i18n6,
+         libkf6package6,
+         libqt6core6t64,
+         libqt6multimedia6,
+         libqt6qml6,
+         ${misc:Depends},
+         ${shlibs:Depends}
+Description: Kabegame wallpaper plugin for KDE Plasma 6
+ KDE Plasma 6 wallpaper plugin. Requires Plasma 6 and Kabegame.
+ Use Kabegame as desktop wallpaper with transitions, rotation, and
+ Kabegame Bridge integration.
+ .
+ Requires Plasma 6. Install Kabegame first:
+ https://github.com/kabegame/kabegame#installation

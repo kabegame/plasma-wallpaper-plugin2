@@ -82,7 +82,7 @@ ColumnLayout {
         Layout.fillWidth: true
 
         RowLayout {
-            Kirigami.FormData.label: i18n("Kabegame：")
+            Kirigami.FormData.label: i18n("Kabegame:")
             spacing: Kirigami.Units.smallSpacing
 
             Rectangle {
@@ -93,7 +93,7 @@ ColumnLayout {
             }
 
             Label {
-                text: backend.connected ? i18n("已连接") : i18n("未连接")
+                text: backend.connected ? i18n("Connected") : i18n("Disconnected")
             }
 
             Item {
@@ -101,7 +101,7 @@ ColumnLayout {
             }
 
             Button {
-                text: i18n("打开 Kabegame")
+                text: i18n("Open Kabegame")
                 icon.name: "system-run"
                 onClicked: backend.openKabegame()
             }
@@ -301,19 +301,19 @@ ColumnLayout {
                 Layout.topMargin: Kirigami.Units.smallSpacing
 
                 Label {
-                    text: i18n("第 %1 页 · 本页 100 张 · 共 %2 张", backend.galleryPage, backend.galleryTotal)
+                    text: i18n("Page %1 · 100 per page · %2 total", backend.galleryPage, backend.galleryTotal)
                     Layout.fillWidth: true
                     elide: Text.ElideRight
                 }
 
                 Button {
-                    text: i18n("上一页")
+                    text: i18n("Previous")
                     enabled: backend.galleryPage > 1
                     onClicked: backend.loadGalleryPage(backend.galleryPage - 1)
                 }
 
                 Button {
-                    text: i18n("下一页")
+                    text: i18n("Next")
                     enabled: backend.galleryImages.length >= backend.galleryPageSize
                     onClicked: backend.loadGalleryPage(backend.galleryPage + 1)
                 }

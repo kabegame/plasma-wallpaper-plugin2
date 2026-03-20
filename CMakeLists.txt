@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.19)
 project(kabegame-wallpaper-plugin)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -30,6 +30,18 @@ find_package(KF6 ${KF6_MIN_VERSION} REQUIRED COMPONENTS
 
 find_package(Plasma REQUIRED)
 
-set(KABEGAME_WALLPAPER_VERSION "2.2.16" CACHE STRING "Kabegame wallpaper plugin version")
+# Read version from package/metadata.json (single source of truth)
+set(METADATA_JSON_PATH "${CMAKE_SOURCE_DIR}/package/metadata.json")
+if(EXISTS "${METADATA_JSON_PATH}")
+    file(READ "${METADATA_JSON_PATH}" METADATA_JSON)
+    string(JSON KABEGAME_WALLPAPER_VERSION GET "${METADATA_JSON}" KPlugin Version)
+    if(NOT KABEGAME_WALLPAPER_VERSION)
+        set(KABEGAME_WALLPAPER_VERSION "0.0.0")
+        message(WARNING "Could not parse Version from ${METADATA_JSON_PATH}, using 0.0.0")
+    endif()
+else()
+    set(KABEGAME_WALLPAPER_VERSION "0.0.0")
+    message(WARNING "${METADATA_JSON_PATH} not found, using version 0.0.0")
+endif()
 
 add_subdirectory(plugin)

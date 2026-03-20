@@ -24,6 +24,11 @@ if ! pkg-config --exists plasma; then
     echo "可能需要安装: sudo apt install libkf5plasma-dev extra-cmake-modules"
 fi
 
+echo "编译翻译文件..."
+cd "$SCRIPT_DIR/package/translate"
+./build.sh
+cd "$SCRIPT_DIR"
+
 # 创建构建目录
 echo "创建构建目录..."
 mkdir -p "$BUILD_DIR"

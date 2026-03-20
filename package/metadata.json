@@ -7,12 +7,16 @@
                 "Name": "Cmtheit"
             }
         ],
-        "Description": "Kabegame 壁纸插件 - 支持过渡效果、轮播和 Kabegame Bridge",
+        "Description": "Kabegame wallpaper plugin — transitions, rotation, and Kabegame Bridge",
+        "Description[ja]": "Kabegame 壁紙プラグイン — トランジション、ローテーション、Kabegame Bridge",
+        "Description[ko]": "Kabegame 배경화면 플러그인 — 전환, 순환 및 Kabegame Bridge",
         "Description[zh_CN]": "Kabegame 壁纸插件 - 支持过渡效果、轮播和 Kabegame Bridge",
         "Icon": "preferences-desktop-wallpaper",
         "Id": "org.kabegame.wallpaper",
         "License": "MIT",
-        "Name": "Kabegame 壁纸",
+        "Name": "Kabegame Wallpaper",
+        "Name[ja]": "Kabegame 壁紙",
+        "Name[ko]": "Kabegame 배경화면",
         "Name[zh_CN]": "Kabegame 壁纸",
         "Version": "2.1.1",
         "Website": "https://github.com/kabegame/kabegame"

@@ -1,0 +1,21 @@
+#!/usr/bin/make -f
+%:
+	dh $@
+
+override_dh_auto_configure:
+	mkdir -p build
+	cd build && cmake .. \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DKDE_INSTALL_USE_QT_SYS_PATHS=ON
+
+override_dh_auto_build:
+	./package/translate/build.sh
+	cd build && make -j$$(nproc)
+
+override_dh_auto_install:
+	cd build && make DESTDIR=$$(cd .. && pwd)/debian/kabegame-plasma-wallpaper install
+	rm -rf debian/kabegame-plasma-wallpaper/usr/share/plasma/wallpapers/org.kabegame.wallpaper/translate
+
+override_dh_auto_clean:
+	rm -rf build

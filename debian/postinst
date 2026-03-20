@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+echo ""
+echo "Kabegame Plasma Wallpaper plugin installed."
+echo "Restart Plasma Shell to see the new wallpaper in system settings:"
+echo "  kquitapp6 plasmashell 2>/dev/null; kstart6 plasmashell &"
+echo "Or log out and log back in."
+echo ""

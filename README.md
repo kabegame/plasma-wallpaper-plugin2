@@ -2,6 +2,8 @@
 
 一个功能强大的 KDE Plasma 壁纸插件，使用 C++ 后端 + QML 前端架构，支持多种过渡效果、智能轮播和 Kabegame 集成。
 
+> **需要 Plasma 6**：本插件仅支持 KDE Plasma 6，不支持 Plasma 5。需先安装 [Kabegame 主程序](https://github.com/kabegame/kabegame#installation)。
+
 ## 功能特性
 
 ### 智能模式切换
@@ -35,34 +37,45 @@
 
 ## 安装方法
 
-### 方法 1：C++ 版本（推荐）
+### 方法 1：deb 包（推荐，需 Plasma 6）
+
+1. 确保已安装 [Kabegame 主程序](https://github.com/kabegame/kabegame#installation)。
+2. 从 [Releases](https://github.com/kabegame/plasma-wallpaper-plugin2/releases) 下载 `kabegame-plasma-wallpaper_*_amd64.deb`。
+3. 安装：
+   ```bash
+   sudo dpkg -i kabegame-plasma-wallpaper_*_amd64.deb
+   ```
+   若依赖报错：`sudo apt-get install -f`
+4. 重启 Plasma Shell：
+   ```bash
+   kquitapp6 plasmashell 2>/dev/null; kstart6 plasmashell &
+   ```
+   或注销后重新登录。
+
+**本地打 deb**：在仓库根执行 `./build-deb.sh`，`.deb`、`.changes`、`.buildinfo` 会整理到 `dist/`，不会写到父目录。
+
+### 方法 2：从源码构建（需 Plasma 6 / KF6）
 
 需要先安装依赖：
 
 ```bash
-# Ubuntu/Debian
-sudo apt install cmake extra-cmake-modules libkf5plasma-dev qtdeclarative5-dev
-
-# Fedora
-sudo dnf install cmake extra-cmake-modules kf5-plasma-devel qt5-qtdeclarative-devel
-
-# Arch Linux
-sudo pacman -S cmake extra-cmake-modules plasma-framework qt5-declarative
+# Ubuntu/Debian (需 KF6，可添加 ppa:kubuntu-ppa/backports)
+sudo apt install cmake extra-cmake-modules libkf6i18n-dev libkf6package-dev \
+  libqt6core6-dev libqt6qml6-dev plasma-workspace-dev qt6-base-dev gettext
 ```
 
 构建并安装：
 
 ```bash
-cd src-plasma-wallpaper-plugin
 ./install.sh
 ```
 
 ### 安装后
 
-重启 Plasma Shell 使插件生效：
+重启 Plasma Shell 使插件生效（Plasma 6）：
 
 ```bash
-kquitapp5 plasmashell && kstart5 plasmashell
+kquitapp6 plasmashell 2>/dev/null; kstart6 plasmashell &
 ```
 
 ## 使用方法
@@ -78,11 +91,11 @@ kquitapp5 plasmashell && kstart5 plasmashell
 ## 项目结构
 
 ```
-src-plasma-wallpaper-plugin/
+.
 ├── CMakeLists.txt              # 主构建配置
 ├── build.sh                    # 构建脚本
-├── install-cpp.sh              # C++ 版本安装脚本
-├── install.sh                  # QML 版本安装脚本
+├── build-deb.sh                # 构建 deb 包
+├── install.sh                  # 安装脚本
 │
 ├── plugin/                     # C++ 后端
 │   ├── CMakeLists.txt
@@ -92,31 +105,26 @@ src-plasma-wallpaper-plugin/
 │   │   - 文件监视 (QFileSystemWatcher)
 │   │   - 轮播定时器 (QTimer)
 │   ├── kabegamewallpaperplugin.cpp  # QML 插件注册
-│   └── qmldir                  # QML 模块声明
+│   └── qmldir.in               # QML 模块声明
 │
-├── package/                    # QML 前端 (C++ 版本)
+├── package/                    # QML 前端
 │   ├── metadata.json           # 插件元数据
 │   └── contents/
 │       ├── config/main.xml     # 配置项定义
 │       └── ui/
 │           ├── main.qml        # 壁纸显示界面
 │           └── config.qml      # 配置界面
+│   └── translate/              # i18n (ja, ko, zh_CN)
 │
-└── org.kabegame.wallpaper/     # 纯 QML 版本（备用）
-    ├── metadata.json
-    └── contents/
-        ├── config/main.xml
-        └── ui/
-            ├── main.qml
-            └── config.qml
+└── debian/                     # Debian 打包
 ```
 
 ## 技术栈
 
 - **C++17** - 后端逻辑
-- **Qt 5.15** - 核心框架
+- **Qt 6** - 核心框架
 - **QML** - 用户界面
-- **KDE Plasma Framework** - 壁纸插件 API
+- **KDE Frameworks 6 / Plasma 6** - 壁纸插件 API
 - **CMake** - 构建系统
 
 ## 调试
@@ -128,7 +136,7 @@ src-plasma-wallpaper-plugin/
 journalctl -f | grep -i "kabegame"
 
 # 或者在终端启动 Plasma Shell 查看完整输出
-kquitapp5 plasmashell && plasmashell 2>&1 | tee plasma.log
+kquitapp6 plasmashell 2>/dev/null; plasmashell 2>&1 | tee plasma.log
 ```
 
 ### 日志输出示例
