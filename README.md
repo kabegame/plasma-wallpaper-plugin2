@@ -157,7 +157,7 @@ kquitapp6 plasmashell 2>/dev/null; plasmashell 2>&1 | tee plasma.log
 
 ### 简单方案：文件通信
 
-Daemon 写入 JSON 文件，插件监听文件变化：
+Kabegame 主应用写入 JSON 文件，插件监听文件变化：
 
 ```json
 {

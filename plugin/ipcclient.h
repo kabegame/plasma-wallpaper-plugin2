@@ -22,8 +22,8 @@ public:
     bool isConnected() const;
     QString socketPath() const { return m_socketPath; }
 
-    void connectToDaemon();
-    void disconnectFromDaemon();
+    void connectToApp();
+    void disconnectFromApp();
 
     quint64 sendRequest(const QCborMap &request, const ReplyHandler &handler = ReplyHandler());
     void subscribeEvents(const QCborArray &kinds);

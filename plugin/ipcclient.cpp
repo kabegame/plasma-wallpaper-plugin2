@@ -56,7 +56,7 @@ bool IpcClient::isConnected() const
     return m_socket->state() == QLocalSocket::ConnectedState;
 }
 
-void IpcClient::connectToDaemon()
+void IpcClient::connectToApp()
 {
     m_shouldReconnect = true;
 
@@ -73,7 +73,7 @@ void IpcClient::connectToDaemon()
     m_socket->connectToServer(m_socketPath);
 }
 
-void IpcClient::disconnectFromDaemon()
+void IpcClient::disconnectFromApp()
 {
     m_shouldReconnect = false;
     m_heartbeatTimer->stop();
@@ -189,7 +189,7 @@ void IpcClient::onHeartbeatTimer()
 
 void IpcClient::onReconnectTimer()
 {
-    connectToDaemon();
+    connectToApp();
 }
 
 bool IpcClient::writeFrame(const QByteArray &payload)
@@ -285,7 +285,7 @@ QString IpcClient::cborToString(const QCborValue &value) const
 
 quint64 IpcClient::readRequestId(const QCborMap &map) const
 {
-    // Daemon 响应使用 serde rename_all = "kebab-case"，键名为 "request-id"
+    // 应用 IPC 响应使用 serde rename_all = "kebab-case"，键名为 "request-id"
     QCborValue idValue = map.value(QStringLiteral("request-id"));
     if (idValue.isUndefined()) {
         idValue = map.value(QStringLiteral("request_id"));

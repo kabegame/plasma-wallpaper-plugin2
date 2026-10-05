@@ -25,19 +25,19 @@ WallpaperBackend::~WallpaperBackend()
 {
     m_alive = false;
     if (m_ipc) {
-        m_ipc->disconnectFromDaemon();
+        m_ipc->disconnectFromApp();
     }
 }
 
 void WallpaperBackend::connectToKabegame()
 {
-    m_ipc->connectToDaemon();
+    m_ipc->connectToApp();
 }
 
 void WallpaperBackend::disconnectFromKabegame()
 {
     if (m_ipc) {
-        m_ipc->disconnectFromDaemon();
+        m_ipc->disconnectFromApp();
     }
 }
 
@@ -320,7 +320,7 @@ void WallpaperBackend::onIpcConnectedChanged(bool connected)
     kinds.append(QStringLiteral("wallpaper-update-image"));
     kinds.append(QStringLiteral("setting-change"));
     kinds.append(QStringLiteral("images-change"));
-    kinds.append(QStringLiteral("daemon-shutdown"));
+    kinds.append(QStringLiteral("app-shutdown"));
     kinds.append(QStringLiteral("album-added"));
     kinds.append(QStringLiteral("album-name-changed"));
     kinds.append(QStringLiteral("album-deleted"));
@@ -386,7 +386,7 @@ void WallpaperBackend::onIpcEventReceived(const QString &eventType, const QCborM
         return;
     }
 
-    if (eventType == QLatin1String("daemon-shutdown")) {
+    if (eventType == QLatin1String("app-shutdown")) {
         m_connected = false;
         Q_EMIT connectedChanged();
     }
